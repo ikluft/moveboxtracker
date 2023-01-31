@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS log (
   id integer INTEGER PRIMARY KEY,
-  table text NOT NULL ,
-  field text NOT NULL ,
+  table_name text NOT NULL ,
+  field_name text NOT NULL ,
   old text,
   new text,
   timestamp datetime NOT NULL 
