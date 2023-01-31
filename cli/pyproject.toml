@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "moveboxtracker"
+version = "0.1.0"
+description = "moving box tracker and label generator"
+authors = [ "Ian Kluft <ko6yq.dev+python@gmail.com>" ]
+license = "GPL-3.0-or-later"
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX",
+    "Intended Audience :: End Users/Desktop"
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+colorlookup = "^0.2"
+weasyprint = ">= 55, < 58"
+
+[tool.poetry.dev-dependencies]
+flake8 = ">= 3.0.0, <7.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "semver"
