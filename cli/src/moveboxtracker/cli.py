@@ -28,7 +28,7 @@ All of the databasea access operations take the following ("CRUD") arguments:
     --delete | --del | -d   id
 """
 import argparse
-from importlib.metadata import (version, PackageNotFoundError)
+from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 from xdg import BaseDirectory
 
@@ -39,7 +39,7 @@ data_home = BaseDirectory.xdg_data_home
 def _get_version():
     """display version"""
     try:
-        ver = str(version('moveboxtracker'))
+        ver = str(version("moveboxtracker"))
     except PackageNotFoundError:
         ver = "development environment - version not available"
     return ver
@@ -146,7 +146,9 @@ def run():
     parser_log.set_defaults(func=_do_log)
 
     # define subparsers for low-level database access
-    parser_db = subparsers.add_parser("db", help="low-level database access subcommands")
+    parser_db = subparsers.add_parser(
+        "db", help="low-level database access subcommands"
+    )
     subparsers_db = parser_db.add_subparsers(help="low-level db sub-command help")
 
     # parser_db_parent contains template for common parameters in all the db subparsers
@@ -192,12 +194,16 @@ def run():
     parser_db_room.set_defaults(func=_do_db_room)
 
     parser_db_scan = subparsers_db.add_parser(
-        "scan", help="box scan event on move to new location", parents=[parser_db_parent]
+        "scan",
+        help="box scan event on move to new location",
+        parents=[parser_db_parent],
     )
     parser_db_scan.set_defaults(func=_do_db_scan)
 
     parser_db_user = subparsers_db.add_parser(
-        "user", help="user who owns database or performs a box scan", parents=[parser_db_parent]
+        "user",
+        help="user who owns database or performs a box scan",
+        parents=[parser_db_parent],
     )
     parser_db_user.set_defaults(func=_do_db_user)
 
