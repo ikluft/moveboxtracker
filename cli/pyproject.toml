@@ -1,6 +1,5 @@
 [tool.poetry]
 name = "moveboxtracker"
-version = "0.1.0"
 description = "moving box tracker and label generator"
 authors = [ "Ian Kluft <ko6yq.dev+python@gmail.com>" ]
 license = "GPL-3.0-or-later"
@@ -11,6 +10,7 @@ classifiers = [
     "Operating System :: POSIX",
     "Intended Audience :: End Users/Desktop"
 ]
+version = "0.0.0" # placeholder for poetry-dynamic-versioning
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -23,8 +23,9 @@ pyxdg = ">=0.27, < 2.0"
 flake8 = ">= 3.0.0, <7.0"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
+#build-backend = "poetry.core.masonry.api"
+build-backend = "poetry_dynamic_versioning.backend"
 
 [tool.poetry-dynamic-versioning]
 enable = true
