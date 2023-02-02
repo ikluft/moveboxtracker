@@ -41,71 +41,71 @@ def _get_version():
     try:
         ver = str(version("moveboxtracker"))
     except PackageNotFoundError:
-        ver = "development environment - version not available"
+        ver = "version not available in development environment"
     return ver
 
 
-def _do_init():
+def _do_init(args):
     """initialize new moving box database"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_label():
+def _do_label(args):
     """print label(s) for specified box ids"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_merge():
+def _do_merge(args):
     """merge in an external SQLite database file, from another device"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_log():
+def _do_log(args):
     """view log"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_batch():
+def _do_db_batch(args):
     """database access: batch/group of moving boxes"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_box():
+def _do_db_box(args):
     """database access: moving box including label info"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_item():
+def _do_db_item(args):
     """database access: item inside a box"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_location():
+def _do_db_location(args):
     """database access: location where boxes may be"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_log():
+def _do_db_log(args):
     """database access: log of data update events"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_project():
+def _do_db_project(args):
     """database access: overall move project info"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_room():
+def _do_db_room(args):
     """database access: room at origin & destination"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_scan():
+def _do_db_scan(args):
     """database access: box scan event on move to new location"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_user():
+def _do_db_user(args):
     """database access: user who owns database or performs a box scan"""
     raise Exception("not implemented")  # TODO
 
