@@ -29,97 +29,155 @@ All of the databasea access operations take the following ("CRUD") arguments:
 """
 import argparse
 from importlib.metadata import version, PackageNotFoundError
-from pathlib import Path
-from xdg import BaseDirectory
 
-# globals
-data_home = BaseDirectory.xdg_data_home
+# manage table names used by CLI and by database classes
+# Shorter names are preferred for a CLI. Descriptive names are preferred for an SQL schema.
+# And some names, such as "box", are prohibited in an SQL schema due to conflicts.
+# The CLI layer knows the CLI names. The CLI knowns the class names for the database layer.
+# The database classes know their schema names.
+cli_to_db_name = {
+    "batch": "DB_BatchMove",
+    "box": "DB_MovingBox",
+    "item": "DB_Item",
+    "location": "DB_Location",
+    "log": "DB_Log",
+    "project": "DB_MoveProject",
+    "room": "DB_Room",
+    "scan": "DB_BoxScan",
+    "user": "DB_URIUser",
+}
 
 
 def _get_version():
     """display version"""
     try:
-        ver = str(version("moveboxtracker"))
+        ver = "moveboxtracker " + str(version("moveboxtracker"))
     except PackageNotFoundError:
-        ver = "version not available in development environment"
+        ver = "moveboxtracker version not available in development environment"
     return ver
 
 
-def _do_init(args):
+def _do_init(args) -> str | None:
     """initialize new moving box database"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_label(args):
+def _do_label(args) -> str | None:
     """print label(s) for specified box ids"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_merge(args):
+def _do_merge(args) -> str | None:
     """merge in an external SQLite database file, from another device"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_log(args):
+def _do_log(args) -> str | None:
     """view log"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_batch(args):
-    """database access: batch/group of moving boxes"""
+def _do_db(args) -> str | None:
+    """lower-level database access commands"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db_box(args):
-    """database access: moving box including label info"""
-    raise Exception("not implemented")  # TODO
-
-
-def _do_db_item(args):
-    """database access: item inside a box"""
-    raise Exception("not implemented")  # TODO
-
-
-def _do_db_location(args):
-    """database access: location where boxes may be"""
-    raise Exception("not implemented")  # TODO
-
-
-def _do_db_log(args):
-    """database access: log of data update events"""
-    raise Exception("not implemented")  # TODO
-
-
-def _do_db_project(args):
-    """database access: overall move project info"""
-    raise Exception("not implemented")  # TODO
-
-
-def _do_db_room(args):
-    """database access: room at origin & destination"""
-    raise Exception("not implemented")  # TODO
-
-
-def _do_db_scan(args):
-    """database access: box scan event on move to new location"""
-    raise Exception("not implemented")  # TODO
-
-
-def _do_db_user(args):
-    """database access: user who owns database or performs a box scan"""
-    raise Exception("not implemented")  # TODO
-
-
-def run():
-    """process command line arguments and run program"""
-
-    # define global parser
-    top_parser = argparse.ArgumentParser(
-        prog="moveboxtracker",
-        description="moving box database manager and label generator",
+def _gen_arg_subparser_table(
+    subparsers_db, parser_db_parent, name, help_str, fields
+) -> None:
+    subparser_table = subparsers_db.add_parser(
+        name, help=help_str, parents=[parser_db_parent]
     )
-    top_parser.add_argument("--version", action="version", version=_get_version())
+    subparser_table.set_defaults(table=name)
+    for field in fields:
+        subparser_table.add_argument(
+            f"--{field}", help=f"{field} field of {name} table"
+        )
 
+
+def _gen_arg_subparsers_db(subparsers) -> None:
+    # define subparsers for low-level database access
+    parser_db = subparsers.add_parser(
+        "db", help="low-level database access subcommands"
+    )
+    parser_db.set_defaults(func=_do_db)
+    subparsers_db = parser_db.add_subparsers(help="low-level db sub-command help")
+
+    # parser_db_parent contains template for common parameters in all the db subparsers
+    parser_db_parent = argparse.ArgumentParser(add_help=False)
+    parser_db_parent.add_argument(
+        "op", choices=["create", "read", "update", "delete"], nargs=1
+    )
+    parser_db_parent.add_argument("id", type=int, nargs="?", help="database record id")
+
+    # generate subparsers for each table
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="batch",
+        help_str="batch/group of moving boxes",
+        fields=["timestamp", "location"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="box",
+        help_str="moving box including label info",
+        fields=["location", "info", "room", "user", "image"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="item",
+        help_str="item inside a box",
+        fields=["box", "description", "image"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="location",
+        help_str="location where boxes may be",
+        fields=["name"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="log",
+        help_str="log of data update events",
+        fields=["table_name", "field_name", "old", "new", "timestamp"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="project",
+        help_str="overall move project info",
+        fields=["primary_user", "title", "found_contact"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="room",
+        help_str="room at origin & destination",
+        fields=["name", "color"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="scan",
+        help_str="box scan event on move to new location",
+        fields=["box", "batch", "user", "timestamp"],
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
+        name="user",
+        help_str="user who owns database or performs a box scan",
+        fields=["name"],
+    )
+
+
+def _gen_arg_subparsers(top_parser) -> None:
+    """generate argparse first-level sub-parsers"""
     # define subparsers for high-level operations
     subparsers = top_parser.add_subparsers(help="sub-command help")
     parser_init = subparsers.add_parser(
@@ -146,69 +204,38 @@ def run():
     parser_log.set_defaults(func=_do_log)
 
     # define subparsers for low-level database access
-    parser_db = subparsers.add_parser(
-        "db", help="low-level database access subcommands"
-    )
-    subparsers_db = parser_db.add_subparsers(help="low-level db sub-command help")
+    _gen_arg_subparsers_db(subparsers)
 
-    # parser_db_parent contains template for common parameters in all the db subparsers
-    parser_db_parent = argparse.ArgumentParser(add_help=False)
-    parser_db_parent.add_argument("--create", "--new", "-c", help="create/add record")
-    parser_db_parent.add_argument("--read", "--get", "-r", help="read/get record")
-    parser_db_parent.add_argument("--update", "--set", "-s", help="update/set record")
-    parser_db_parent.add_argument("--delete", "--del", "-d", help="delete record")
 
-    parser_db_batch = subparsers_db.add_parser(
-        "batch", help="batch/group of moving boxes", parents=[parser_db_parent]
-    )
-    parser_db_batch.set_defaults(func=_do_db_batch)
+def _gen_arg_parser() -> argparse.ArgumentParser:
+    """generate argparse parser hierarchy"""
 
-    parser_db_box = subparsers_db.add_parser(
-        "box", help="moving box including label info", parents=[parser_db_parent]
+    # define global parser
+    top_parser = argparse.ArgumentParser(
+        prog="moveboxtracker",
+        description="moving box database manager and label generator",
     )
-    parser_db_box.set_defaults(func=_do_db_box)
+    top_parser.add_argument("--version", action="version", version=_get_version())
 
-    parser_db_item = subparsers_db.add_parser(
-        "item", help="item inside a box", parents=[parser_db_parent]
-    )
-    parser_db_item.set_defaults(func=_do_db_item)
+    # define subparsers for high-level operations
+    _gen_arg_subparsers(top_parser)
 
-    parser_db_location = subparsers_db.add_parser(
-        "location", help="location where boxes may be", parents=[parser_db_parent]
-    )
-    parser_db_location.set_defaults(func=_do_db_location)
+    return top_parser
 
-    parser_db_log = subparsers_db.add_parser(
-        "log", help="log of data update events", parents=[parser_db_parent]
-    )
-    parser_db_log.set_defaults(func=_do_db_log)
 
-    parser_db_project = subparsers_db.add_parser(
-        "project", help="overall move project info", parents=[parser_db_parent]
-    )
-    parser_db_project.set_defaults(func=_do_db_project)
+def run():
+    """process command line arguments and run program"""
 
-    parser_db_room = subparsers_db.add_parser(
-        "room", help="room at origin & destination", parents=[parser_db_parent]
-    )
-    parser_db_room.set_defaults(func=_do_db_room)
-
-    parser_db_scan = subparsers_db.add_parser(
-        "scan",
-        help="box scan event on move to new location",
-        parents=[parser_db_parent],
-    )
-    parser_db_scan.set_defaults(func=_do_db_scan)
-
-    parser_db_user = subparsers_db.add_parser(
-        "user",
-        help="user who owns database or performs a box scan",
-        parents=[parser_db_parent],
-    )
-    parser_db_user.set_defaults(func=_do_db_user)
+    # define global parser
+    top_parser = _gen_arg_parser()
 
     # parse arguments and run subcommand functions
     args = vars(top_parser.parse_args())
     if "func" not in args:
         top_parser.error("no command was specified")
-    args["func"](args)
+    err = args["func"](args)
+
+    # return success/failure results
+    if err is not None:
+        top_parser.exit(status=1, message=err)
+    top_parser.exit()
