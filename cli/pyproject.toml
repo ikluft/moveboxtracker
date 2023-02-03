@@ -13,7 +13,7 @@ classifiers = [
 version = "0.0.0" # placeholder for poetry-dynamic-versioning
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 colorlookup = "^0.2"
 weasyprint = ">= 55, < 58"
 qrcode = "^7.0"
