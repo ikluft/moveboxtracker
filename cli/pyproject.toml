@@ -1,8 +1,14 @@
-[tool.poetry]
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
 name = "moveboxtracker"
-description = "moving box tracker and label generator"
-authors = [ "Ian Kluft <ko6yq.dev+python@gmail.com>" ]
-license = "GPL-3.0-or-later"
+dynamic = ["version", "description"]
+authors = [
+    { name = "Ian Kluft", email="ko6yq.dev+python@gmail.com" }
+]
+license = {file = "LICENSE"}
 readme = "README.md"
 classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
@@ -10,25 +16,23 @@ classifiers = [
     "Operating System :: POSIX",
     "Intended Audience :: End Users/Desktop"
 ]
-version = "0.0.0" # placeholder for poetry-dynamic-versioning
+requires-python = ">=3.10"
+dependencies = [
+    "colorlookup >= 0.2",
+    "weasyprint >= 55, < 58",
+    "qrcode >= 7.0, < 8.0",
+    "pyxdg >=0.27, < 2.0",
+    "SQLAlchemy >= 2.0, < 3.0"
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-colorlookup = "^0.2"
-weasyprint = ">= 55, < 58"
-qrcode = "^7.0"
-pyxdg = ">=0.27, < 2.0"
-SQLAlchemy = "^2.0"
+[project.urls]
+Home = "https://github.com/ikluft/moveboxtracker"
+Source = "https://github.com/ikluft/moveboxtracker/tree/main/cli"
+Bug_Tracker = "https://github.com/ikluft/moveboxtracker/issues"
 
-[tool.poetry.dev-dependencies]
-flake8 = ">= 3.0.0, <7.0"
 
-[build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
-#build-backend = "poetry.core.masonry.api"
-build-backend = "poetry_dynamic_versioning.backend"
-
-[tool.poetry-dynamic-versioning]
-enable = true
-vcs = "git"
-style = "semver"
+[project.optional-dependencies]
+test = [
+    "flake8 >= 3.0.0, <7.0"
+]
+doc = ["sphinx"]
