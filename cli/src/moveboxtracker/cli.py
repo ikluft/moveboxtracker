@@ -60,6 +60,7 @@ CLI_TO_DB_CLASS = {
     "scan": MBT_DB_BoxScan,
     "user": MBT_DB_URIUser,
 }
+ErrStr = str
 
 
 def _get_version():
@@ -83,7 +84,7 @@ def _args_to_data(args: dict, fields: list) -> dict:
     return result
 
 
-def _do_init(args) -> str | None:
+def _do_init(args) -> ErrStr | None:
     """initialize new moving box database"""
     if "db_file" not in args:
         return "database file not specified"
@@ -95,22 +96,22 @@ def _do_init(args) -> str | None:
     return None
 
 
-def _do_label(args) -> str | None:
+def _do_label(args) -> ErrStr | None:
     """print label(s) for specified box ids"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_merge(args) -> str | None:
+def _do_merge(args) -> ErrStr | None:
     """merge in an external SQLite database file, from another device"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_log(args) -> str | None:
+def _do_log(args) -> ErrStr | None:
     """view log"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db(args) -> str | None:
+def _do_db(args) -> ErrStr | None:
     """lower-level database access commands"""
     raise Exception("not implemented")  # TODO
 
