@@ -27,8 +27,11 @@ All of the databasea access operations take the following ("CRUD") arguments:
     --update | --set | -u   id --key=value [--key=value ...]
     --delete | --del | -d   id
 """
+
 import argparse
 from importlib.metadata import version, PackageNotFoundError
+from . import __version__
+from .db import MoveBoxTrackerDB
 
 # manage table names used by CLI and by database classes
 # Shorter names are preferred for a CLI. Descriptive names are preferred for an SQL schema.
@@ -36,30 +39,39 @@ from importlib.metadata import version, PackageNotFoundError
 # The CLI layer knows the CLI names. The CLI knowns the class names for the database layer.
 # The database classes know their schema names.
 cli_to_db_name = {
-    "batch": "DB_BatchMove",
-    "box": "DB_MovingBox",
-    "item": "DB_Item",
-    "location": "DB_Location",
-    "log": "DB_Log",
-    "project": "DB_MoveProject",
-    "room": "DB_Room",
-    "scan": "DB_BoxScan",
-    "user": "DB_URIUser",
+    "batch": "MBT_DB_BatchMove",
+    "box": "MBT_DB_MovingBox",
+    "item": "MBT_DB_Item",
+    "location": "MBT_DB_Location",
+    "log": "MBT_DB_Log",
+    "project": "MBT_DB_MoveProject",
+    "room": "MBT_DB_Room",
+    "scan": "MBT_DB_BoxScan",
+    "user": "MBT_DB_URIUser",
 }
 
 
 def _get_version():
     """display version"""
-    try:
-        ver = "moveboxtracker " + str(version("moveboxtracker"))
-    except PackageNotFoundError:
-        ver = "moveboxtracker version not available in development environment"
+    if __version__ is not None:
+        ver = __version__
+    else:
+        try:
+            ver = "moveboxtracker " + str(version("moveboxtracker"))
+        except PackageNotFoundError:
+            ver = "moveboxtracker version not available in development environment"
     return ver
 
 
 def _do_init(args) -> str | None:
     """initialize new moving box database"""
-    raise Exception("not implemented")  # TODO
+    if "db_file" not in args:
+        return "database file not specified"
+    filepath = args["db_file"]
+    obj = MoveBoxTrackerDB(filepath)
+    if not isinstance(obj, MoveBoxTrackerDB):
+        return "database initialization failed"
+    return None
 
 
 def _do_label(args) -> str | None:
@@ -107,6 +119,9 @@ def _gen_arg_subparsers_db(subparsers) -> None:
     parser_db_parent = argparse.ArgumentParser(add_help=False)
     parser_db_parent.add_argument(
         "op", choices=["create", "read", "update", "delete"], nargs=1
+    )
+    parser_db_parent.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
     )
     parser_db_parent.add_argument("id", type=int, nargs="?", help="database record id")
 
@@ -183,24 +198,38 @@ def _gen_arg_subparsers(top_parser) -> None:
     parser_init = subparsers.add_parser(
         "init", help="initialize new moving box database"
     )
-    parser_init.add_argument("--primary_user", "--user")
-    parser_init.add_argument("--title")
-    parser_init.add_argument("--found_contact", "--found", "--contact")
+    parser_init.add_argument("--primary_user", "--user", nargs=1)
+    parser_init.add_argument("--title", nargs=1)
+    parser_init.add_argument("--found_contact", "--found", "--contact", nargs=1)
+    parser_init.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
     parser_init.set_defaults(func=_do_init)
 
     parser_label = subparsers.add_parser(
         "label", help="print label(s) for specified box ids"
     )
-    parser_label.add_argument("box_id", nargs="*", metavar="ID", type=int)
+    parser_label.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_label.add_argument("box_id", nargs="+", metavar="ID", type=int)
     parser_label.set_defaults(func=_do_label)
 
     parser_merge = subparsers.add_parser(
         "merge", help="merge in an external SQLite database file, from another device"
     )
-    parser_merge.add_argument("db_file", metavar="DB", help="database file")
+    parser_merge.add_argument(
+        "db_file", action="store", metavar="DB1", help="database file"
+    )
+    parser_merge.add_argument(
+        "db_merge", nargs=1, metavar="DB2", help="database file to merge in"
+    )
     parser_merge.set_defaults(func=_do_merge)
 
     parser_log = subparsers.add_parser("log", help="view log")
+    parser_log.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
     parser_log.set_defaults(func=_do_log)
 
     # define subparsers for low-level database access
@@ -216,6 +245,18 @@ def _gen_arg_parser() -> argparse.ArgumentParser:
         description="moving box database manager and label generator",
     )
     top_parser.add_argument("--version", action="version", version=_get_version())
+    top_parser.add_argument(
+        "--verbose",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="more verbose output",
+    )
+    top_parser.add_argument(
+        "--debug",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="turn on debugging mode",
+    )
 
     # define subparsers for high-level operations
     _gen_arg_subparsers(top_parser)
@@ -231,11 +272,18 @@ def run():
 
     # parse arguments and run subcommand functions
     args = vars(top_parser.parse_args())
+    err = None
     if "func" not in args:
         top_parser.error("no command was specified")
-    err = args["func"](args)
+    try:
+        err = args["func"](args)
+    except Exception as exc:
+        exc_class = exc.__class__
+        if "verbose" in args and args["verbose"]:
+            print(f"exception {exc_class} occurred with args: ", args)
+        raise exc
 
     # return success/failure results
     if err is not None:
-        top_parser.exit(status=1, message=err)
+        top_parser.exit(status=1, message=err + "\n")
     top_parser.exit()
