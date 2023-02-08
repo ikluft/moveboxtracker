@@ -10,6 +10,7 @@ from xdg import BaseDirectory
 # globals
 DATA_HOME = BaseDirectory.xdg_data_home  # XDG default data directory
 MBT_PKGNAME = "moveboxtracker"
+MBT_SCHEMA_PRAGMAS = ["PRAGMA foreign_keys=ON;"]
 MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     "batch_move": [
         "CREATE TABLE IF NOT EXISTS batch_move ("
@@ -90,7 +91,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "CREATE INDEX IF NOT EXISTS uri_user_id_index ON uri_user(id)",
     ],
 }
-class_to_table = {
+DB_CLASS_TO_TABLE = {
     "MBT_DB_BatchMove": "batch_move",
     "MBT_DB_MovingBox": "moving_box",
     "MBT_DB_Item": "item",
@@ -106,7 +107,7 @@ class_to_table = {
 class MoveBoxTrackerDB:
     """access to moving box database file"""
 
-    def __init__(self, filename):
+    def __init__(self, filename, data: dict = ...):
         # construct database path from relative or absolute path
         if Path(filename).is_absolute():
             self.filepath = Path(filename)
@@ -125,15 +126,42 @@ class MoveBoxTrackerDB:
         need_init = not self.filepath.exists()
         self.conn = sqlite3.connect(self.filepath)
         if need_init:
-            self._init_db()
+            if data is None:
+                data = {}  # _init_db will still error out for missing parameters
+            self._init_db(data)
 
-    def _init_db(self) -> None:
+    def __del__(self):
+        self.conn.close()
+
+    def _init_db(self, data: dict) -> None:
         """initialize database file from SQL schema statements"""
+        # check required data fields
+        missing = MBT_DB_MoveProject.check_missing_fields(data)
+        if len(missing) > 0:
+            raise RuntimeError(f"missing data for table initialization: {missing}")
+
+        # run SQLite pragmas, if any were defined
+        for sql_line in MBT_SCHEMA_PRAGMAS:
+            self.conn.execute(sql_line)
+        self.conn.commit()
+
+        # set up database schema
         with self.conn:
             for schema_lines in MBT_SCHEMA.values():
                 for sql_line in schema_lines:
                     self.conn.execute(sql_line)
-        self.conn.close()
+
+        # populate initial records from provided data
+        # create uri_user record first because move_project refers to it
+        user = MBT_DB_URIUser(self)
+        user_data = {"name": data["primary_user"]}
+        user_id = user.create(user_data)
+
+        # create move_project record
+        data["primary_user"] = user_id
+        project = MBT_DB_MoveProject(self)
+        project.create(data)
+        return
 
     def db_filepath(self) -> Path:
         """get file path of SQLite database"""
@@ -144,49 +172,153 @@ class MoveBoxTrackerDB:
         return self.conn
 
 
-class MBT_DB_Table:
-    """base class for moveboxtracker database table classes"""
+class MBT_DB_Record:
+    """base class for moveboxtracker database record classes"""
 
     def __init__(self, mbt_db: MoveBoxTrackerDB):
         self.mbt_db = mbt_db
-        if self.__class__.__name__ not in class_to_table:
-            raise Exception(
-                f"MBT_DB_Table: class {self.__class__.__name__} is not recognized"
+        if self.__class__.__name__ not in DB_CLASS_TO_TABLE:
+            raise RuntimeError(
+                f"MBT_DB_Record: class {self.__class__.__name__} is not recognized"
             )
-        self.table = class_to_table[self.__class__.__name__]
+        self.table = DB_CLASS_TO_TABLE[self.__class__.__name__]
+
+    @classmethod
+    def fields(cls):
+        """subclasses must override this to return a list of the table's fields"""
+        raise NotImplementedError
+
+    @classmethod
+    def check_missing_fields(cls, data: dict) -> list:
+        """check required fields and return list of missing fields"""
+        missing = []
+        for key in cls.fields():
+            if key not in data:
+                missing.append(key)
+        return missing
+
+    @classmethod
+    def check_allowed_fields(cls, data: dict) -> list:
+        """check allowed fields and return list of invalid fields"""
+        fields = cls.fields()
+        invalid = []
+        for key in data:
+            if key not in fields:
+                invalid.append(key)
+        return invalid
+
+    @classmethod
+    def table_name(cls) -> str:
+        """find database table name for the current class"""
+        if cls.__name__ not in DB_CLASS_TO_TABLE:
+            raise RuntimeError(
+                f"MBT_DB_Record.table_name(): class {cls.__name__} is not recognized"
+            )
+        return DB_CLASS_TO_TABLE[cls.__name__]
+
+    def create(self, data: dict) -> int:
+        """create a db record"""
+
+        # check data field names are valid fields
+        invalid = self.__class__.check_allowed_fields(data)
+        if len(invalid) > 0:
+            raise RuntimeError(f"invalid fields for table initialization: {invalid}")
+
+        # insert record
+        cur = self.mbt_db.conn.cursor()
+        table = self.__class__.table_name()
+        placeholder_list = []
+        fields_list = data.keys()
+        fields_str = (", ").join(fields_list)
+        for key in fields_list:
+            placeholder_list.append(f":{key}")
+        placeholder_str = (", ").join(placeholder_list)
+        sql_cmd = f"INSERT INTO {table} ({fields_str}) VALUES ({placeholder_str})"
+        print(f"executing SQL [{sql_cmd} ] with {data}", file=sys.stderr)
+        cur.execute(sql_cmd, data)
+        if cur.rowcount == 0:
+            raise RuntimeError("SQL insert failed")
+        new_id = cur.lastrowid
+        self.mbt_db.conn.commit()
+        return new_id
 
 
-class MBT_DB_BatchMove(MBT_DB_Table):
+class MBT_DB_BatchMove(MBT_DB_Record):
     """class to handle batch_move records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["timestamp", "location"]
 
-class MBT_DB_MovingBox(MBT_DB_Table):
+
+class MBT_DB_MovingBox(MBT_DB_Record):
     """class to handle moving_box records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["location", "info", "room", "user", "image"]
 
-class MBT_DB_Item(MBT_DB_Table):
+
+class MBT_DB_Item(MBT_DB_Record):
     """class to handle item records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["box", "description", "image"]
 
-class MBT_DB_Location(MBT_DB_Table):
+
+class MBT_DB_Location(MBT_DB_Record):
     """class to handle location records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["name"]
 
-class MBT_DB_Log(MBT_DB_Table):
+
+class MBT_DB_Log(MBT_DB_Record):
     """class to handle log records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["table_name", "field_name", "old", "new", "timestamp"]
 
-class MBT_DB_MoveProject(MBT_DB_Table):
+
+class MBT_DB_MoveProject(MBT_DB_Record):
     """class to handle mode_project records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["primary_user", "title", "found_contact"]
 
-class MBT_DB_Room(MBT_DB_Table):
+
+class MBT_DB_Room(MBT_DB_Record):
     """class to handle room records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["name", "color"]
 
-class MBT_DB_BoxScan(MBT_DB_Table):
+
+class MBT_DB_BoxScan(MBT_DB_Record):
     """class to handle box_scan records"""
 
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["box", "batch", "user", "timestamp"]
 
-class MBT_DB_URIUser(MBT_DB_Table):
+
+class MBT_DB_URIUser(MBT_DB_Record):
     """class to handle uri_user records"""
+
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["name"]
