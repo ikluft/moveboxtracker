@@ -22,7 +22,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     ],
     "box_scan": [
         "CREATE TABLE IF NOT EXISTS box_scan ("
-        "id integer INTEGER PRIMARY KEY,"
+        "id INTEGER PRIMARY KEY,"
         "box integer NOT NULL REFERENCES moving_box (id),"
         "batch integer NOT NULL REFERENCES batch_move (id),"
         "user integer NOT NULL REFERENCES url_user (id),"
@@ -32,7 +32,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     ],
     "item": [
         "CREATE TABLE IF NOT EXISTS item ("
-        "id integer INTEGER PRIMARY KEY,"
+        "id INTEGER PRIMARY KEY,"
         "box integer NOT NULL REFERENCES moving_box (id),"
         "description text NOT NULL,"
         "image blob"
@@ -41,14 +41,14 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     ],
     "location": [
         "CREATE TABLE IF NOT EXISTS location ("
-        "id integer INTEGER PRIMARY KEY,"
+        "id INTEGER PRIMARY KEY,"
         "name text NOT NULL"
         ")",
         "CREATE INDEX IF NOT EXISTS location_id_index  ON location(id)",
     ],
     "log": [
         "CREATE TABLE IF NOT EXISTS log ("
-        "id integer INTEGER PRIMARY KEY,"
+        "id INTEGER PRIMARY KEY,"
         "table_name text NOT NULL ,"
         "field_name text NOT NULL ,"
         "old text,"
@@ -66,7 +66,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     ],
     "moving_box": [
         "CREATE TABLE IF NOT EXISTS moving_box ("
-        "id integer INTEGER PRIMARY KEY,"
+        "id INTEGER PRIMARY KEY,"
         "location integer NOT NULL REFERENCES location (id),"
         "info text NOT NULL ,"
         "room integer NOT NULL REFERENCES room (id),"
@@ -77,7 +77,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     ],
     "room": [
         "CREATE TABLE IF NOT EXISTS room ("
-        "id integer INTEGER PRIMARY KEY,"
+        "id INTEGER PRIMARY KEY,"
         "name text NOT NULL,"
         "color text NOT NULL"
         ")",
@@ -219,6 +219,11 @@ class MBT_DB_Record:
     def db_create(self, data: dict) -> int:
         """create a db record"""
 
+        # verify field data is not empty
+        table = self.__class__.table_name()
+        if len(data) == 0:
+            raise RuntimeError(f"no data fields provided for new {table} record")
+
         # check data field names are valid fields
         invalid = self.__class__.check_allowed_fields(data)
         if len(invalid) > 0:
@@ -226,7 +231,6 @@ class MBT_DB_Record:
 
         # insert record
         cur = self.mbt_db.conn.cursor()
-        table = self.__class__.table_name()
         placeholder_list = []
         fields_list = data.keys()
         fields_str = (", ").join(fields_list)
@@ -242,7 +246,7 @@ class MBT_DB_Record:
         self.mbt_db.conn.commit()
         return new_id
 
-    def db_read(self, data: dict) -> int:
+    def db_read(self, data: dict) -> list:
         """read a db record"""
         raise NotImplementedError("db_read not implemented")
 
@@ -261,7 +265,7 @@ class MBT_DB_BatchMove(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["timestamp", "location"]
+        return ["id", "timestamp", "location"]
 
 
 class MBT_DB_MovingBox(MBT_DB_Record):
@@ -270,7 +274,7 @@ class MBT_DB_MovingBox(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["location", "info", "room", "user", "image"]
+        return ["id", "location", "info", "room", "user", "image"]
 
 
 class MBT_DB_Item(MBT_DB_Record):
@@ -279,7 +283,7 @@ class MBT_DB_Item(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["box", "description", "image"]
+        return ["id", "box", "description", "image"]
 
 
 class MBT_DB_Location(MBT_DB_Record):
@@ -288,7 +292,7 @@ class MBT_DB_Location(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["name"]
+        return ["id", "name"]
 
 
 class MBT_DB_Log(MBT_DB_Record):
@@ -297,7 +301,7 @@ class MBT_DB_Log(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["table_name", "field_name", "old", "new", "timestamp"]
+        return ["id", "table_name", "field_name", "old", "new", "timestamp"]
 
 
 class MBT_DB_MoveProject(MBT_DB_Record):
@@ -315,7 +319,7 @@ class MBT_DB_Room(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["name", "color"]
+        return ["id", "name", "color"]
 
 
 class MBT_DB_BoxScan(MBT_DB_Record):
@@ -324,7 +328,7 @@ class MBT_DB_BoxScan(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["box", "batch", "user", "timestamp"]
+        return ["id", "box", "batch", "user", "timestamp"]
 
 
 class MBT_DB_URIUser(MBT_DB_Record):
@@ -333,4 +337,4 @@ class MBT_DB_URIUser(MBT_DB_Record):
     @classmethod
     def fields(cls):
         """return list of the table's fields"""
-        return ["name"]
+        return ["id", "name"]

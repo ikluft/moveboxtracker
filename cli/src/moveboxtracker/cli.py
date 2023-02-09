@@ -78,11 +78,12 @@ def _get_version():
 
 
 def _args_to_data(args: dict, fields: list) -> dict:
-    """utility function to create a query data map structure from fields in args"""
+    """create a query data map structure from fields in args"""
     result = {}
     for key in fields:
         if key in args:
-            result[key] = args[key]
+            if args[key] is not None:
+                result[key] = args[key]
     return result
 
 
@@ -117,14 +118,14 @@ def _do_db(args: dict) -> ErrStr | None:
     """lower-level database access commands"""
 
     # collect arguments
-    if "name" not in args:
+    if "table_name" not in args:
         return "_do_db: db table not specified"
-    table_name = args["name"]
+    table_name = args["table_name"]
     if table_name not in CLI_TO_DB_CLASS:
         return f"_do_db: no db class found for {table_name}"
     table_class = CLI_TO_DB_CLASS[table_name]
     db_file = args["db_file"]
-    data = _args_to_data(args, MBT_DB_MoveProject.fields())
+    data = _args_to_data(args, table_class.fields())
     db_obj = MoveBoxTrackerDB(db_file)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "database initialization failed"
@@ -132,13 +133,13 @@ def _do_db(args: dict) -> ErrStr | None:
     # call CRUD (create, read, update, or delete) handler function
     crud_op = args["op"]
     match crud_op:
-        case ["create"]:
+        case "create":
             err = _do_db_create(data, table_class, db_obj)
-        case ["read"]:
+        case "read":
             err = _do_db_read(data, table_class, db_obj)
-        case ["update"]:
+        case "update":
             err = _do_db_update(data, table_class, db_obj)
-        case ["delete"]:
+        case "delete":
             err = _do_db_delete(data, table_class, db_obj)
         case _:
             err = f"operation '{crud_op}' not recognized"
@@ -194,20 +195,20 @@ def _do_db_delete(
 
 
 def _gen_arg_subparser_table(
-    subparsers_db, parser_db_parent, name, help_str, fields
+    subparsers_db, parser_db_parent, table_name, help_str, fields
 ) -> None:
     subparser_table = subparsers_db.add_parser(
-        name, help=help_str, parents=[parser_db_parent]
+        table_name, help=help_str, parents=[parser_db_parent]
     )
-    subparser_table.set_defaults(table=name)
+    subparser_table.set_defaults(table_name=table_name)
     for field in fields:
         subparser_table.add_argument(
-            f"--{field}", help=f"{field} field of {name} table"
+            f"--{field}", help=f"{field} field of {table_name} table"
         )
 
 
 def _omit_id(in_list: list) -> list:
-    """utility function to omit the "id" field so that it is not included in fields for update"""
+    """omit the "id" field so that it is not included in fields for update"""
     if in_list[0] == "id":
         del in_list[0]
     return in_list
@@ -219,79 +220,84 @@ def _gen_arg_subparsers_db(subparsers) -> None:
         "db", help="low-level database access subcommands"
     )
     parser_db.set_defaults(func=_do_db)
-    subparsers_db = parser_db.add_subparsers(help="low-level db sub-command help")
 
     # parser_db_parent contains template for common parameters in all the db subparsers
     parser_db_parent = argparse.ArgumentParser(add_help=False)
+    parser_db_parent.add_argument("op", choices=["create", "read", "update", "delete"])
     parser_db_parent.add_argument(
-        "op", choices=["create", "read", "update", "delete"], nargs=1
+        "--file",
+        dest="db_file",
+        action="store",
+        metavar="DB",
+        help="database file",
+        required=True,
     )
+    subparsers_db = parser_db.add_subparsers(help="low-level db sub-command help")
     parser_db_parent.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "id", type=int, action="store", nargs="?", help="database record id"
     )
-    parser_db_parent.add_argument("id", type=int, nargs="?", help="database record id")
 
     # generate subparsers for each table
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="batch",
+        table_name="batch",
         help_str="batch/group of moving boxes",
         fields=_omit_id(MBT_DB_BatchMove.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="box",
+        table_name="box",
         help_str="moving box including label info",
         fields=_omit_id(MBT_DB_MovingBox.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="item",
+        table_name="item",
         help_str="item inside a box",
         fields=_omit_id(MBT_DB_Item.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="location",
+        table_name="location",
         help_str="location where boxes may be",
         fields=_omit_id(MBT_DB_Location.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="log",
+        table_name="log",
         help_str="log of data update events",
         fields=_omit_id(MBT_DB_Log.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="project",
+        table_name="project",
         help_str="overall move project info",
         fields=_omit_id(MBT_DB_MoveProject.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="room",
+        table_name="room",
         help_str="room at origin & destination",
         fields=_omit_id(MBT_DB_Room.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="scan",
+        table_name="scan",
         help_str="box scan event on move to new location",
         fields=_omit_id(MBT_DB_BoxScan.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
-        name="user",
+        table_name="user",
         help_str="user who owns database or performs a box scan",
         fields=_omit_id(MBT_DB_URIUser.fields()),
     )
