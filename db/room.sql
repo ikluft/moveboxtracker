@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS room (
-  id integer INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   name text NOT NULL,
   color text NOT NULL 
 );

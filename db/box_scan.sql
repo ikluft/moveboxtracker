@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS box_scan (
-  id integer INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   box integer NOT NULL REFERENCES moving_box (id),
   batch integer NOT NULL REFERENCES batch_move (id),
   user integer NOT NULL REFERENCES url_user (id),

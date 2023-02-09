@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS log (
-  id integer INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   table_name text NOT NULL ,
   field_name text NOT NULL ,
   old text,

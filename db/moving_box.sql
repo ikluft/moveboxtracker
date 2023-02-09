@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS moving_box (
-  id integer INTEGER PRIMARY KEY,
+  id INTEGER PRIMARY KEY,
   location integer NOT NULL REFERENCES location (id),
   info text NOT NULL ,
   room integer NOT NULL REFERENCES room (id),
