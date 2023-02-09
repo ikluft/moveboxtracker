@@ -126,8 +126,6 @@ class MoveBoxTrackerDB:
         need_init = not self.filepath.exists()
         self.conn = sqlite3.connect(self.filepath)
         if need_init:
-            if data is None:
-                data = {}  # _init_db will still error out for missing parameters
             self._init_db(data)
 
     def __del__(self):
@@ -136,6 +134,10 @@ class MoveBoxTrackerDB:
     def _init_db(self, data: dict) -> None:
         """initialize database file from SQL schema statements"""
         # check required data fields
+        if data is None:
+            raise RuntimeError(
+                "data for move_project is needed to initialize a new database"
+            )
         missing = MBT_DB_MoveProject.check_missing_fields(data)
         if len(missing) > 0:
             raise RuntimeError(f"missing data for table initialization: {missing}")
@@ -155,13 +157,12 @@ class MoveBoxTrackerDB:
         # create uri_user record first because move_project refers to it
         user = MBT_DB_URIUser(self)
         user_data = {"name": data["primary_user"]}
-        user_id = user.create(user_data)
+        user_id = user.db_create(user_data)
 
         # create move_project record
         data["primary_user"] = user_id
         project = MBT_DB_MoveProject(self)
-        project.create(data)
-        return
+        project.db_create(data)
 
     def db_filepath(self) -> Path:
         """get file path of SQLite database"""
@@ -176,12 +177,11 @@ class MBT_DB_Record:
     """base class for moveboxtracker database record classes"""
 
     def __init__(self, mbt_db: MoveBoxTrackerDB):
-        self.mbt_db = mbt_db
         if self.__class__.__name__ not in DB_CLASS_TO_TABLE:
             raise RuntimeError(
                 f"MBT_DB_Record: class {self.__class__.__name__} is not recognized"
             )
-        self.table = DB_CLASS_TO_TABLE[self.__class__.__name__]
+        self.mbt_db = mbt_db
 
     @classmethod
     def fields(cls):
@@ -216,7 +216,7 @@ class MBT_DB_Record:
             )
         return DB_CLASS_TO_TABLE[cls.__name__]
 
-    def create(self, data: dict) -> int:
+    def db_create(self, data: dict) -> int:
         """create a db record"""
 
         # check data field names are valid fields
@@ -241,6 +241,18 @@ class MBT_DB_Record:
         new_id = cur.lastrowid
         self.mbt_db.conn.commit()
         return new_id
+
+    def db_read(self, data: dict) -> int:
+        """read a db record"""
+        raise NotImplementedError("db_read not implemented")
+
+    def db_update(self, data: dict) -> int:
+        """update a db record"""
+        raise NotImplementedError("db_update not implemented")
+
+    def db_delete(self, data: dict) -> int:
+        """delete a db record"""
+        raise NotImplementedError("db_delete not implemented")
 
 
 class MBT_DB_BatchMove(MBT_DB_Record):

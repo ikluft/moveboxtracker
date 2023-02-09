@@ -60,6 +60,8 @@ CLI_TO_DB_CLASS = {
     "scan": MBT_DB_BoxScan,
     "user": MBT_DB_URIUser,
 }
+
+# type alias for error strings
 ErrStr = str
 
 
@@ -84,36 +86,111 @@ def _args_to_data(args: dict, fields: list) -> dict:
     return result
 
 
-def _do_init(args) -> ErrStr | None:
+def _do_init(args: dict) -> ErrStr | None:
     """initialize new moving box database"""
     if "db_file" not in args:
         return "database file not specified"
     filepath = args["db_file"]
     data = _args_to_data(args, MBT_DB_MoveProject.fields())
-    project_obj = MoveBoxTrackerDB(filepath, data)
-    if not isinstance(project_obj, MoveBoxTrackerDB):
+    db_obj = MoveBoxTrackerDB(filepath, data)
+    if not isinstance(db_obj, MoveBoxTrackerDB):
         return "database initialization failed"
     return None
 
 
-def _do_label(args) -> ErrStr | None:
+def _do_label(args: dict) -> ErrStr | None:
     """print label(s) for specified box ids"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_merge(args) -> ErrStr | None:
+def _do_merge(args: dict) -> ErrStr | None:
     """merge in an external SQLite database file, from another device"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_log(args) -> ErrStr | None:
+def _do_log(args: dict) -> ErrStr | None:
     """view log"""
     raise Exception("not implemented")  # TODO
 
 
-def _do_db(args) -> ErrStr | None:
+def _do_db(args: dict) -> ErrStr | None:
     """lower-level database access commands"""
-    raise Exception("not implemented")  # TODO
+
+    # collect arguments
+    if "name" not in args:
+        return "_do_db: db table not specified"
+    table_name = args["name"]
+    if table_name not in CLI_TO_DB_CLASS:
+        return f"_do_db: no db class found for {table_name}"
+    table_class = CLI_TO_DB_CLASS[table_name]
+    db_file = args["db_file"]
+    data = _args_to_data(args, MBT_DB_MoveProject.fields())
+    db_obj = MoveBoxTrackerDB(db_file)
+    if not isinstance(db_obj, MoveBoxTrackerDB):
+        return "database initialization failed"
+
+    # call CRUD (create, read, update, or delete) handler function
+    crud_op = args["op"]
+    match crud_op:
+        case ["create"]:
+            err = _do_db_create(data, table_class, db_obj)
+        case ["read"]:
+            err = _do_db_read(data, table_class, db_obj)
+        case ["update"]:
+            err = _do_db_update(data, table_class, db_obj)
+        case ["delete"]:
+            err = _do_db_delete(data, table_class, db_obj)
+        case _:
+            err = f"operation '{crud_op}' not recognized"
+    return err
+
+
+def _do_db_create(
+    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
+) -> ErrStr | None:
+    """lower-level database access: create a record"""
+    rec_obj = table_class(db_obj)
+    res_id = rec_obj.db_create(data)
+    if res_id is None:
+        return "failed to create record"
+    print(f"success: created record {res_id}")
+    return None
+
+
+def _do_db_read(
+    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
+) -> ErrStr | None:
+    """lower-level database access: read a record"""
+    rec_obj = table_class(db_obj)
+    res = rec_obj.db_read(data)
+    if res is None:
+        return "failed to read record"
+    print(f"success: read record {res}")
+    return None
+
+
+def _do_db_update(
+    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
+) -> ErrStr | None:
+    """lower-level database access: update a record"""
+    rec_obj = table_class(db_obj)
+    res = rec_obj.db_update(data)
+    if res is None:
+        return "failed to update record"
+    print(f"success: updated record {res}")
+    return None
+
+
+def _do_db_delete(
+    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
+) -> ErrStr | None:
+    """lower-level database access: delete a record"""
+    rec_obj = table_class(db_obj)
+    res = rec_obj.db_delete(data)
+    if res is None:
+        return "failed to delete record"
+    print(f"success: deleted record {res}")
+    return None
 
 
 def _gen_arg_subparser_table(
