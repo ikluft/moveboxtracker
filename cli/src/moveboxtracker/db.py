@@ -298,7 +298,20 @@ class MBT_DB_Record:
 
     def db_delete(self, data: dict) -> int:
         """delete a db record by id"""
-        raise NotImplementedError("db_delete not implemented")
+
+        # delete record
+        table = self.__class__.table_name()
+        cur = self.mbt_db.conn.cursor()
+        if "id" not in data:
+            raise RuntimeError(f"delete requested on {table} missing 'id' parameter")
+        sql_cmd = f"DELETE FROM {table} WHERE id = :id"
+        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        cur.execute(sql_cmd, data)
+        row_count = cur.rowcount
+        if row_count == 0:
+            raise RuntimeError("SQL delete failed")
+        self.mbt_db.conn.commit()
+        return row_count
 
 
 class MBT_DB_BatchMove(MBT_DB_Record):

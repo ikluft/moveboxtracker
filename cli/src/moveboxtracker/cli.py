@@ -158,7 +158,7 @@ def _do_db_create(
     res_id = rec_obj.db_create(data)
     if res_id is None:
         return "failed to create record"
-    print(f"success: created record {res_id}")
+    print(f"success: created record #{res_id}")
     return None
 
 
@@ -170,7 +170,7 @@ def _do_db_read(
     res = rec_obj.db_read(data)
     if res is None:
         return "failed to read record"
-    print(f"read {res} records")
+    print(f"read {res} record(s)")
     return None
 
 
@@ -182,7 +182,7 @@ def _do_db_update(
     res = rec_obj.db_update(data)
     if res is None:
         return "failed to update record"
-    print(f"success: updated {res} records")
+    print(f"success: updated {res} record(S)")
     return None
 
 
@@ -194,7 +194,7 @@ def _do_db_delete(
     res = rec_obj.db_delete(data)
     if res is None:
         return "failed to delete record"
-    print(f"success: deleted record {res}")
+    print(f"success: deleted {res} record(s)")
     return None
 
 
