@@ -239,7 +239,7 @@ class MBT_DB_Record:
             placeholder_list.append(f":{key}")
         placeholder_str = (", ").join(placeholder_list)
         sql_cmd = f"INSERT INTO {table} ({fields_str}) VALUES ({placeholder_str})"
-        print(f"executing SQL [{sql_cmd} ] with {data}", file=sys.stderr)
+        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL insert failed")
@@ -256,7 +256,7 @@ class MBT_DB_Record:
         if "id" not in data:
             raise RuntimeError(f"read requested on {table} missing 'id' parameter")
         sql_cmd = f"SELECT * FROM {table} WHERE id = :id"
-        print(f"executing SQL [{sql_cmd} ] with {data}", file=sys.stderr)
+        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")
@@ -268,7 +268,33 @@ class MBT_DB_Record:
 
     def db_update(self, data: dict) -> int:
         """update a db record by id"""
-        raise NotImplementedError("db_update not implemented")
+
+        # verify field data is not empty
+        table = self.__class__.table_name()
+        if len(data) == 0:
+            raise RuntimeError(f"no data fields provided for {table} record update")
+
+        # check data field names are valid fields
+        invalid = self.__class__.check_allowed_fields(data)
+        if len(invalid) > 0:
+            raise RuntimeError(f"invalid fields for table initialization: {invalid}")
+
+        # update record
+        cur = self.mbt_db.conn.cursor()
+        placeholder_list = []
+        fields_list = data.keys()
+        for key in fields_list:
+            if key != "id":
+                placeholder_list.append(f"{key} = :{key}")
+        placeholder_str = (", ").join(placeholder_list)
+        sql_cmd = f"UPDATE {table} SET {placeholder_str} WHERE id = :id"
+        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        cur.execute(sql_cmd, data)
+        row_count = cur.rowcount
+        if row_count == 0:
+            raise RuntimeError("SQL update failed")
+        self.mbt_db.conn.commit()
+        return row_count
 
     def db_delete(self, data: dict) -> int:
         """delete a db record by id"""

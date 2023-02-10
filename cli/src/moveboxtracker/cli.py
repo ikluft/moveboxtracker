@@ -182,7 +182,7 @@ def _do_db_update(
     res = rec_obj.db_update(data)
     if res is None:
         return "failed to update record"
-    print(f"success: updated record {res}")
+    print(f"success: updated {res} records")
     return None
 
 
