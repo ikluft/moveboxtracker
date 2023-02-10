@@ -21,11 +21,11 @@ database operations (subcommands of db subcommand)
     scan | box_scan         box scan event on move to new location
     user | uri_user         user who owns database or performs a box scan
 
-All of the databasea access operations take the following ("CRUD") arguments:
-    --create | --new | -c   id --key=value [--key=value ...]
-    --read   | --get | -r   id
-    --update | --set | -u   id --key=value [--key=value ...]
-    --delete | --del | -d   id
+The "db" subcommand takes one of the following "CRUD" operation arguments:
+    create                  id --key=value [--key=value ...]
+    read                    id
+    update                  id --key=value [--key=value ...]
+    delete                  id
 """
 
 import argparse
@@ -33,15 +33,15 @@ from importlib.metadata import version, PackageNotFoundError
 from . import __version__
 from .db import (
     MoveBoxTrackerDB,
-    MBT_DB_BatchMove,
-    MBT_DB_MovingBox,
-    MBT_DB_Item,
-    MBT_DB_Location,
-    MBT_DB_Log,
-    MBT_DB_MoveProject,
-    MBT_DB_Room,
-    MBT_DB_BoxScan,
-    MBT_DB_URIUser,
+    MoveDbBatchMove,
+    MoveDbMovingBox,
+    MoveDbItem,
+    MoveDbLocation,
+    MoveDbLog,
+    MoveDbMoveProject,
+    MoveDbRoom,
+    MoveDbBoxScan,
+    MoveDbURIUser,
 )
 
 # manage table names used by CLI and by database classes
@@ -50,15 +50,15 @@ from .db import (
 # The CLI layer knows the CLI names. The CLI knows the class names for the database layer.
 # The database classes know their schema names.
 CLI_TO_DB_CLASS = {
-    "batch": MBT_DB_BatchMove,
-    "box": MBT_DB_MovingBox,
-    "item": MBT_DB_Item,
-    "location": MBT_DB_Location,
-    "log": MBT_DB_Log,
-    "project": MBT_DB_MoveProject,
-    "room": MBT_DB_Room,
-    "scan": MBT_DB_BoxScan,
-    "user": MBT_DB_URIUser,
+    "batch": MoveDbBatchMove,
+    "box": MoveDbMovingBox,
+    "item": MoveDbItem,
+    "location": MoveDbLocation,
+    "log": MoveDbLog,
+    "project": MoveDbMoveProject,
+    "room": MoveDbRoom,
+    "scan": MoveDbBoxScan,
+    "user": MoveDbURIUser,
 }
 
 # type alias for error strings
@@ -96,7 +96,7 @@ def _do_init(args: dict) -> ErrStr | None:
     if "db_file" not in args:
         return "database file not specified"
     filepath = args["db_file"]
-    data = _args_to_data(args, MBT_DB_MoveProject.fields())
+    data = _args_to_data(args, MoveDbMoveProject.fields())
     db_obj = MoveBoxTrackerDB(filepath, data)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "database initialization failed"
@@ -247,63 +247,63 @@ def _gen_arg_subparsers_db(subparsers) -> None:
         parser_db_parent,
         table_name="batch",
         help_str="batch/group of moving boxes",
-        fields=_omit_id(MBT_DB_BatchMove.fields()),
+        fields=_omit_id(MoveDbBatchMove.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="box",
         help_str="moving box including label info",
-        fields=_omit_id(MBT_DB_MovingBox.fields()),
+        fields=_omit_id(MoveDbMovingBox.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="item",
         help_str="item inside a box",
-        fields=_omit_id(MBT_DB_Item.fields()),
+        fields=_omit_id(MoveDbItem.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="location",
         help_str="location where boxes may be",
-        fields=_omit_id(MBT_DB_Location.fields()),
+        fields=_omit_id(MoveDbLocation.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="log",
         help_str="log of data update events",
-        fields=_omit_id(MBT_DB_Log.fields()),
+        fields=_omit_id(MoveDbLog.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="project",
         help_str="overall move project info",
-        fields=_omit_id(MBT_DB_MoveProject.fields()),
+        fields=_omit_id(MoveDbMoveProject.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="room",
         help_str="room at origin & destination",
-        fields=_omit_id(MBT_DB_Room.fields()),
+        fields=_omit_id(MoveDbRoom.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="scan",
         help_str="box scan event on move to new location",
-        fields=_omit_id(MBT_DB_BoxScan.fields()),
+        fields=_omit_id(MoveDbBoxScan.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
         table_name="user",
         help_str="user who owns database or performs a box scan",
-        fields=_omit_id(MBT_DB_URIUser.fields()),
+        fields=_omit_id(MoveDbURIUser.fields()),
     )
 
 

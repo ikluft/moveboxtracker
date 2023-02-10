@@ -93,15 +93,15 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     ],
 }
 DB_CLASS_TO_TABLE = {
-    "MBT_DB_BatchMove": "batch_move",
-    "MBT_DB_MovingBox": "moving_box",
-    "MBT_DB_Item": "item",
-    "MBT_DB_Location": "location",
-    "MBT_DB_Log": "log",
-    "MBT_DB_MoveProject": "move_project",
-    "MBT_DB_Room": "room",
-    "MBT_DB_BoxScan": "box_scan",
-    "MBT_DB_URIUser": "uri_user",
+    "MoveDbBatchMove": "batch_move",
+    "MoveDbMovingBox": "moving_box",
+    "MoveDbItem": "item",
+    "MoveDbLocation": "location",
+    "MoveDbLog": "log",
+    "MoveDbMoveProject": "move_project",
+    "MoveDbRoom": "room",
+    "MoveDbBoxScan": "box_scan",
+    "MoveDbURIUser": "uri_user",
 }
 
 
@@ -139,7 +139,7 @@ class MoveBoxTrackerDB:
             raise RuntimeError(
                 "data for move_project is needed to initialize a new database"
             )
-        missing = MBT_DB_MoveProject.check_missing_fields(data)
+        missing = MoveDbMoveProject.check_missing_fields(data)
         if len(missing) > 0:
             raise RuntimeError(f"missing data for table initialization: {missing}")
 
@@ -156,13 +156,13 @@ class MoveBoxTrackerDB:
 
         # populate initial records from provided data
         # create uri_user record first because move_project refers to it
-        user = MBT_DB_URIUser(self)
+        user = MoveDbURIUser(self)
         user_data = {"name": data["primary_user"]}
         user_id = user.db_create(user_data)
 
         # create move_project record
         data["primary_user"] = user_id
-        project = MBT_DB_MoveProject(self)
+        project = MoveDbMoveProject(self)
         project.db_create(data)
 
     def db_filepath(self) -> Path:
@@ -174,13 +174,13 @@ class MoveBoxTrackerDB:
         return self.conn
 
 
-class MBT_DB_Record:
+class MoveDbRecord:
     """base class for moveboxtracker database record classes"""
 
     def __init__(self, mbt_db: MoveBoxTrackerDB):
         if self.__class__.__name__ not in DB_CLASS_TO_TABLE:
             raise RuntimeError(
-                f"MBT_DB_Record: class {self.__class__.__name__} is not recognized"
+                f"MoveDbRecord: class {self.__class__.__name__} is not recognized"
             )
         self.mbt_db = mbt_db
 
@@ -213,7 +213,7 @@ class MBT_DB_Record:
         """find database table name for the current class"""
         if cls.__name__ not in DB_CLASS_TO_TABLE:
             raise RuntimeError(
-                f"MBT_DB_Record.table_name(): class {cls.__name__} is not recognized"
+                f"MoveDbRecord.table_name(): class {cls.__name__} is not recognized"
             )
         return DB_CLASS_TO_TABLE[cls.__name__]
 
@@ -314,7 +314,7 @@ class MBT_DB_Record:
         return row_count
 
 
-class MBT_DB_BatchMove(MBT_DB_Record):
+class MoveDbBatchMove(MoveDbRecord):
     """class to handle batch_move records"""
 
     @classmethod
@@ -323,7 +323,7 @@ class MBT_DB_BatchMove(MBT_DB_Record):
         return ["id", "timestamp", "location"]
 
 
-class MBT_DB_MovingBox(MBT_DB_Record):
+class MoveDbMovingBox(MoveDbRecord):
     """class to handle moving_box records"""
 
     @classmethod
@@ -332,7 +332,7 @@ class MBT_DB_MovingBox(MBT_DB_Record):
         return ["id", "location", "info", "room", "user", "image"]
 
 
-class MBT_DB_Item(MBT_DB_Record):
+class MoveDbItem(MoveDbRecord):
     """class to handle item records"""
 
     @classmethod
@@ -341,7 +341,7 @@ class MBT_DB_Item(MBT_DB_Record):
         return ["id", "box", "description", "image"]
 
 
-class MBT_DB_Location(MBT_DB_Record):
+class MoveDbLocation(MoveDbRecord):
     """class to handle location records"""
 
     @classmethod
@@ -350,7 +350,7 @@ class MBT_DB_Location(MBT_DB_Record):
         return ["id", "name"]
 
 
-class MBT_DB_Log(MBT_DB_Record):
+class MoveDbLog(MoveDbRecord):
     """class to handle log records"""
 
     @classmethod
@@ -359,7 +359,7 @@ class MBT_DB_Log(MBT_DB_Record):
         return ["id", "table_name", "field_name", "old", "new", "timestamp"]
 
 
-class MBT_DB_MoveProject(MBT_DB_Record):
+class MoveDbMoveProject(MoveDbRecord):
     """class to handle mode_project records"""
 
     @classmethod
@@ -368,7 +368,7 @@ class MBT_DB_MoveProject(MBT_DB_Record):
         return ["primary_user", "title", "found_contact"]
 
 
-class MBT_DB_Room(MBT_DB_Record):
+class MoveDbRoom(MoveDbRecord):
     """class to handle room records"""
 
     @classmethod
@@ -377,7 +377,7 @@ class MBT_DB_Room(MBT_DB_Record):
         return ["id", "name", "color"]
 
 
-class MBT_DB_BoxScan(MBT_DB_Record):
+class MoveDbBoxScan(MoveDbRecord):
     """class to handle box_scan records"""
 
     @classmethod
@@ -386,7 +386,7 @@ class MBT_DB_BoxScan(MBT_DB_Record):
         return ["id", "box", "batch", "user", "timestamp"]
 
 
-class MBT_DB_URIUser(MBT_DB_Record):
+class MoveDbURIUser(MoveDbRecord):
     """class to handle uri_user records"""
 
     @classmethod
