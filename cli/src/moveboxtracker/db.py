@@ -26,7 +26,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "id INTEGER PRIMARY KEY,"
         "box integer NOT NULL REFERENCES moving_box (id),"
         "batch integer NOT NULL REFERENCES batch_move (id),"
-        "user integer NOT NULL REFERENCES url_user (id),"
+        "user integer NOT NULL REFERENCES uri_user (id),"
         "timestamp datetime NOT NULL"
         ")",
         "CREATE INDEX IF NOT EXISTS box_scan_id_index ON box_scan(id)",
@@ -71,7 +71,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "location integer NOT NULL REFERENCES location (id),"
         "info text NOT NULL ,"
         "room integer NOT NULL REFERENCES room (id),"
-        "user integer NOT NULL REFERENCES url_user (id),"
+        "user integer NOT NULL REFERENCES uri_user (id),"
         "image blob"
         ")",
         "CREATE INDEX IF NOT EXISTS moving_box_id_index  ON moving_box(id)",
@@ -259,7 +259,7 @@ class MoveDbRecord:
         table = self.__class__.table_name()
         cur = self.mbt_db.conn.cursor()
         if "id" not in data:
-            raise RuntimeError(f"read requested on {table} missing 'id' parameter")
+            raise RuntimeError(f"read requested on {table} is missing 'id' parameter")
         sql_cmd = f"SELECT * FROM {table} WHERE id = :id"
         print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
@@ -308,7 +308,7 @@ class MoveDbRecord:
         table = self.__class__.table_name()
         cur = self.mbt_db.conn.cursor()
         if "id" not in data:
-            raise RuntimeError(f"delete requested on {table} missing 'id' parameter")
+            raise RuntimeError(f"delete requested on {table} is missing 'id' parameter")
         sql_cmd = f"DELETE FROM {table} WHERE id = :id"
         print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
@@ -335,6 +335,41 @@ class MoveDbMovingBox(MoveDbRecord):
     def fields(cls):
         """return list of the table's fields"""
         return ["id", "location", "info", "room", "user", "image"]
+
+    def box_label_data(self, box_id: int) -> dict:
+        """return a dict of box data for generating its label"""
+
+        # make sure we have a box id
+        table = self.__class__.table_name()
+        if box_id is None:
+            raise RuntimeError(
+                f"box label data request on {table} is missing 'id' parameter"
+            )
+
+        # set up database connection
+        cur = self.mbt_db.conn.cursor()
+        cur.row_factory = sqlite3.Row
+
+        # use box id to query for room, location & user data via their foreign keys
+        data = {"id": box_id}
+        sql_cmd = (
+            "SELECT box.id AS box, room.name AS room, room.color AS color, "
+            "location.name AS location, user.name AS user, project.found_contact AS found "
+            "FROM moving_box AS box, room, location, uri_user AS user, move_project AS project "
+            "WHERE box.id = :id AND room.id = box.room AND location.id = box.location "
+            "AND user.id = box.user AND project.rowid = 1"
+        )
+        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        cur.execute(sql_cmd, data)
+        if cur.rowcount == 0:
+            raise RuntimeError("SQL read failed")
+        row = cur.fetchone()
+
+        # copy results to a dict and return it
+        box_data = {}
+        for key in row.keys():
+            box_data[key] = row[key]
+        return box_data
 
 
 class MoveDbItem(MoveDbRecord):

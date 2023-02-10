@@ -30,6 +30,13 @@ The "db" subcommand takes one of the following "CRUD" operation arguments:
 
 import argparse
 from importlib.metadata import version, PackageNotFoundError
+from pathlib import Path
+import tempfile
+from shutil import move
+import qrcode
+import qrcode.image.svg
+from colorlookup import Color
+from weasyprint import HTML
 from . import __version__
 from .db import (
     MoveBoxTrackerDB,
@@ -103,9 +110,145 @@ def _do_init(args: dict) -> ErrStr | None:
     return None
 
 
+def _gen_label_uri(user: str, box: str, room: str, color: str):
+    """generate URI for moving box label QR code"""
+
+    # determine box URI text for QR code
+    uri = f"movingbox://{user}/{box}?room={room},color={color}"
+    return uri
+
+
+def _gen_label_qrcode(
+    tmpdirpath: Path, user: str, box: str, room: str, color: str
+) -> str:
+    """generate QR code in a file in the temporary directory for use in PDF generation"""
+
+    # generate QR code in SVG for use in PDF
+    qr_svg_file = f"label_{box}.svg"
+    qr_img = qrcode.make(
+        _gen_label_uri(user, box, room, color),
+        box_size=13,
+        border=5,
+        image_factory=qrcode.image.svg.SvgImage,
+        error_correction=qrcode.constants.ERROR_CORRECT_Q,
+    )
+    qr_img.save(f"{tmpdirpath}/{qr_svg_file}")
+    return qr_svg_file
+
+
+def _gen_label_html(box_data: dict, tmpdirpath: Path, qr_svg_file: Path) -> str:
+    """generate HTML in a file in the temporary directory for use in PDF generation"""
+
+    # collect parameters
+    box = str(box_data["box"]).zfill(4)
+    color = Color(box_data["color"]).name.lower()
+    room = str(box_data["room"]).upper()
+
+    # generate label cell
+    # 4 of these will be printed on each page
+    label_cell = [
+        '<table id="label_cell">',
+        "<tr>",
+        f"<td><big><b>{room}</b></big></td>",
+        f'<td style="text-align: right"><big>Box&nbsp;{box}</big></td>',
+        "</tr>",
+        "<tr>",
+        f'<td style="background: {color}">&nbsp;</td>',
+        f'<td><img src="{qr_svg_file}"></td>',
+        "</tr>",
+        "<tr>",
+        '<td colspan=2 style="text-align: center">',
+        "Lost &amp; found contact:",
+        "<br/>",
+        f'{box_data["found"]}',
+        "</td>",
+        "</tr>",
+        "<tr>",
+        "<td colspan=2>&nbsp;</td>",
+        "</tr>",
+        "</table>",
+    ]
+
+    # generate HTML for label
+    label_html = (
+        [
+            "<html>",
+            "<head>",
+            "<style>",
+            "@page { size: Letter }",
+            "</style>",
+            "</head>",
+            '<body style="margin: 0"">',
+            '<table width="100%" style="font-family: sans-serif">',
+            "<tr>",
+            '<td height="50%" width="50%">',
+        ]
+        + label_cell
+        + ["</td>", "<td>&nbsp;</td>", '<td height="50%" width="50%">']
+        + label_cell
+        + ["</td>", "</tr>", "<tr>", '<td height="50%" width="50%">']
+        + label_cell
+        + ["</td>", "<td>&nbsp;</td>", '<td height="50%" width="50%">']
+        + label_cell
+        + ["</td>", "</tr>", "</table>", "</body>", "</html>"]
+    )
+    html_file_path = Path(f"{tmpdirpath}/label_{box}.html")
+    with open(html_file_path, "wt", encoding="utf-8") as textfile:
+        textfile.write("\n".join(label_html) + "\n")
+    return html_file_path
+
+
+def _gen_label(box_data: dict, outdir: str) -> None:
+    """generate one moving box label from a dict of the box's data"""
+
+    # collect parameters
+    user = str(box_data["user"])
+    box = str(box_data["box"]).zfill(4)
+    color = Color(box_data["color"]).name.lower()
+    room = str(box_data["room"]).upper()
+
+    # verify output directory exists
+    outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
+
+    # allocate temporary directory
+    tmpdirpath = tempfile.mkdtemp(prefix="moving_label_")
+
+    # generate QR code in SVG for use in PDF
+    qr_svg_file = _gen_label_qrcode(tmpdirpath, user, box, room, color)
+
+    # Build moving box label as HTML and print.
+    # Simple HTML is PDF'ed & printed, then discarded when the temporary directory is removed.
+    # Just build HTML strings to minimize library dependencies.
+    html_file_path = _gen_label_html(box_data, tmpdirpath, qr_svg_file)
+
+    # generate PDF
+    label_pdf_file = Path(f"{tmpdirpath}/label_{box}.pdf")
+    doc = HTML(filename=html_file_path)
+    doc.write_pdf(
+        target=label_pdf_file,
+        attachments=[f"{tmpdirpath}/{qr_svg_file}"],
+    )
+    move(label_pdf_file, outdir)
+
+
 def _do_label(args: dict) -> ErrStr | None:
     """print label(s) for specified box ids"""
-    raise Exception("not implemented")  # TODO
+    if "db_file" not in args:
+        return "database file not specified"
+    filepath = args["db_file"]
+    data = _args_to_data(args, MoveDbMoveProject.fields())
+    db_obj = MoveBoxTrackerDB(filepath, data)
+    if not isinstance(db_obj, MoveBoxTrackerDB):
+        return "failed to open database"
+
+    # print label data for each box
+    rec_obj = MoveDbMovingBox(db_obj)
+    outdir = Path(args["out_dir"])
+    box_id_list = args["box_id"]
+    for box_id in box_id_list:
+        box_data = rec_obj.box_label_data(box_id)
+        _gen_label(box_data, outdir)
+    return None
 
 
 def _do_merge(args: dict) -> ErrStr | None:
@@ -139,7 +282,7 @@ def _do_db(args: dict) -> ErrStr | None:
     data = _args_to_data(args, table_class.fields())
     db_obj = MoveBoxTrackerDB(db_file)
     if not isinstance(db_obj, MoveBoxTrackerDB):
-        return "database initialization failed"
+        return "failed to open database"
 
     # call CRUD (create, read, update, or delete) handler function
     crud_op = args["op"]
@@ -334,6 +477,14 @@ def _gen_arg_subparsers(top_parser) -> None:
     )
     parser_label.add_argument(
         "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_label.add_argument(
+        "--outdir",
+        dest="out_dir",
+        action="store",
+        metavar="PDFFILE",
+        required=True,
+        help="directory to place output PDF file(s)",
     )
     parser_label.add_argument("box_id", nargs="+", metavar="ID", type=int)
     parser_label.set_defaults(func=_do_label)
