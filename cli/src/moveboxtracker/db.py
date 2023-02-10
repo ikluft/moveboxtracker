@@ -173,6 +173,11 @@ class MoveBoxTrackerDB:
         """get sqlite connection for performing queries"""
         return self.conn
 
+    def db_dump(self) -> None:
+        """dump database contents to standard output"""
+        for line in self.conn.iterdump():
+            print(line)
+
 
 class MoveDbRecord:
     """base class for moveboxtracker database record classes"""

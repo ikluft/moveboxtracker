@@ -118,6 +118,13 @@ def _do_log(args: dict) -> ErrStr | None:
     raise Exception("not implemented")  # TODO
 
 
+def _do_dump(args: dict) -> ErrStr | None:
+    """dump database contents to standard output"""
+    db_file = args["db_file"]
+    db_obj = MoveBoxTrackerDB(db_file)
+    db_obj.db_dump()
+
+
 def _do_db(args: dict) -> ErrStr | None:
     """lower-level database access commands"""
 
@@ -347,6 +354,14 @@ def _gen_arg_subparsers(top_parser) -> None:
         "db_file", action="store", metavar="DB", help="database file"
     )
     parser_log.set_defaults(func=_do_log)
+
+    parser_dump = subparsers.add_parser(
+        "dump", help="dump database contents to standard output"
+    )
+    parser_dump.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_dump.set_defaults(func=_do_dump)
 
     # define subparsers for low-level database access
     _gen_arg_subparsers_db(subparsers)
