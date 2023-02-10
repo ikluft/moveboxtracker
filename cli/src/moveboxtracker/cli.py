@@ -80,10 +80,14 @@ def _get_version():
 def _args_to_data(args: dict, fields: list) -> dict:
     """create a query data map structure from fields in args"""
     result = {}
+    omit_id = args.get("omit_id") or args.get("op") == "create"  # omit 'id'
     for key in fields:
+        if key == "id" and omit_id:
+            continue
         if key in args:
-            if args[key] is not None:
-                result[key] = args[key]
+            if args[key] is None:
+                continue
+            result[key] = args[key]
     return result
 
 
@@ -166,7 +170,7 @@ def _do_db_read(
     res = rec_obj.db_read(data)
     if res is None:
         return "failed to read record"
-    print(f"success: read record {res}")
+    print(f"read {res} records")
     return None
 
 
@@ -316,7 +320,7 @@ def _gen_arg_subparsers(top_parser) -> None:
     parser_init.add_argument(
         "db_file", action="store", metavar="DB", help="database file"
     )
-    parser_init.set_defaults(func=_do_init)
+    parser_init.set_defaults(func=_do_init, omit_id=True)
 
     parser_label = subparsers.add_parser(
         "label", help="print label(s) for specified box ids"

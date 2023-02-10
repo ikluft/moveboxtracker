@@ -5,6 +5,7 @@ database (model layer) routines for moveboxtracker
 import sys
 from pathlib import Path
 import sqlite3
+from prettytable import from_db_cursor, SINGLE_BORDER
 from xdg import BaseDirectory
 
 # globals
@@ -242,20 +243,35 @@ class MBT_DB_Record:
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL insert failed")
-        new_id = cur.lastrowid
+        row_id = cur.lastrowid
         self.mbt_db.conn.commit()
-        return new_id
+        return row_id
 
-    def db_read(self, data: dict) -> list:
-        """read a db record"""
-        raise NotImplementedError("db_read not implemented")
+    def db_read(self, data: dict) -> int:
+        """read a db record by id"""
+
+        # read record
+        table = self.__class__.table_name()
+        cur = self.mbt_db.conn.cursor()
+        if "id" not in data:
+            raise RuntimeError(f"read requested on {table} missing 'id' parameter")
+        sql_cmd = f"SELECT * FROM {table} WHERE id = :id"
+        print(f"executing SQL [{sql_cmd} ] with {data}", file=sys.stderr)
+        cur.execute(sql_cmd, data)
+        if cur.rowcount == 0:
+            raise RuntimeError("SQL read failed")
+        text_table = from_db_cursor(cur)
+        text_table.set_style(SINGLE_BORDER)
+        print(text_table)
+        self.mbt_db.conn.commit()
+        return 1  # if no exceptions raised by now, assume 1 record
 
     def db_update(self, data: dict) -> int:
-        """update a db record"""
+        """update a db record by id"""
         raise NotImplementedError("db_update not implemented")
 
     def db_delete(self, data: dict) -> int:
-        """delete a db record"""
+        """delete a db record by id"""
         raise NotImplementedError("db_delete not implemented")
 
 
