@@ -27,6 +27,7 @@ The "db" subcommand takes one of the following "CRUD" operation arguments:
     delete                  id
 """
 
+import os
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
@@ -71,9 +72,13 @@ CLI_TO_DB_CLASS = {
 ErrStr = str
 
 # CSS stylesheet for box label PDF generator
-BOX_LABEL_STYLESHEET = """
+PAGE_SIZE = os.environ["MBT_PAGE_SIZE"] if "MBT_PAGE_SIZE" in os.environ else "Letter"
+BOX_LABEL_STYLESHEET = (
+    """
     @page {
-        size: Letter;
+        size: """
+    + PAGE_SIZE
+    + """;
         margin: 0.2cm;
     }
     table {
@@ -82,6 +87,7 @@ BOX_LABEL_STYLESHEET = """
         font-family: sans-serif;
     }
     """
+)
 
 
 def _get_version():
@@ -265,7 +271,7 @@ def _do_label(args: dict) -> ErrStr | None:
 
 def _do_merge(args: dict) -> ErrStr | None:
     """merge in an external SQLite database file, from another device"""
-    raise Exception("not implemented")  # TODO
+    raise NotImplementedError  # TODO
 
 
 def _do_dump(args: dict) -> ErrStr | None:
