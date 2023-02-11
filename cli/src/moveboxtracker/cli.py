@@ -5,7 +5,7 @@ usage: moveboxtracker <cmd> args
 
 operations
     init [--key=value ...]  initialize new database
-    label box_id ...        print label(s) for specified box ids (TODO: accept a range m-n)
+    label box_id ...        print label(s) for specified box ids, start-end ranges accepted
     merge|ingest db_file    merge in an external SQLite database file, from another device
     db                      perform database operations
 
@@ -28,6 +28,7 @@ The "db" subcommand takes one of the following "CRUD" operation arguments:
 """
 
 import os
+import re
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
@@ -264,8 +265,18 @@ def _do_label(args: dict) -> ErrStr | None:
     outdir = Path(args["out_dir"])
     box_id_list = args["box_id"]
     for box_id in box_id_list:
-        box_data = rec_obj.box_label_data(box_id)
-        _gen_label(box_data, outdir)
+        # regular expression check for start-end range of box ids
+        match = re.fullmatch(r"^(\d+)-(\d+)$", box_id)
+        if match:
+            # process start-end range of box ids
+            start, end = match.groups()
+            for box_num in range(start, end):
+                box_data = rec_obj.box_label_data(box_num)
+                _gen_label(box_data, outdir)
+        else:
+            # process a single box id
+            box_data = rec_obj.box_label_data(box_id)
+            _gen_label(box_data, outdir)
     return None
 
 
