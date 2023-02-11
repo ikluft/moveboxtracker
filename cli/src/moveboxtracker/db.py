@@ -16,7 +16,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     "batch_move": [
         "CREATE TABLE IF NOT EXISTS batch_move ("
         "id INTEGER PRIMARY KEY,"
-        "timestamp datetime NOT NULL,"
+        "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,"
         "location integer NOT NULL REFERENCES location (id)"
         ")",
         "CREATE INDEX IF NOT EXISTS batch_move_id_index ON batch_move(id)",
@@ -27,9 +27,18 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "box integer NOT NULL REFERENCES moving_box (id),"
         "batch integer NOT NULL REFERENCES batch_move (id),"
         "user integer NOT NULL REFERENCES uri_user (id),"
-        "timestamp datetime NOT NULL"
+        "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP"
         ")",
         "CREATE INDEX IF NOT EXISTS box_scan_id_index ON box_scan(id)",
+    ],
+    "image": [
+        "CREATE TABLE IF NOT EXISTS image ("
+        "id INTEGER PRIMARY KEY NOT NULL,"
+        "imageblob blob NOT NULL,"
+        "description text,"
+        "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        ");",
+        "CREATE INDEX IF NOT EXISTS image_id_index ON image(id);",
     ],
     "item": [
         "CREATE TABLE IF NOT EXISTS item ("
@@ -38,25 +47,14 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "description text NOT NULL,"
         "image blob"
         ")",
-        "CREATE INDEX IF NOT EXISTS item_id_index  ON item(id);",
+        "CREATE INDEX IF NOT EXISTS item_id_index ON item(id);",
     ],
     "location": [
         "CREATE TABLE IF NOT EXISTS location ("
         "id INTEGER PRIMARY KEY,"
         "name text NOT NULL"
         ")",
-        "CREATE INDEX IF NOT EXISTS location_id_index  ON location(id)",
-    ],
-    "log": [
-        "CREATE TABLE IF NOT EXISTS log ("
-        "id INTEGER PRIMARY KEY,"
-        "table_name text NOT NULL ,"
-        "field_name text NOT NULL ,"
-        "old text,"
-        "new text,"
-        "timestamp datetime NOT NULL"
-        ")",
-        "CREATE INDEX IF NOT EXISTS log_id_index  ON log(id)",
+        "CREATE INDEX IF NOT EXISTS location_id_index ON location(id)",
     ],
     "move_project": [
         "CREATE TABLE IF NOT EXISTS move_project ("
@@ -74,7 +72,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "user integer NOT NULL REFERENCES uri_user (id),"
         "image blob"
         ")",
-        "CREATE INDEX IF NOT EXISTS moving_box_id_index  ON moving_box(id)",
+        "CREATE INDEX IF NOT EXISTS moving_box_id_index ON moving_box(id)",
     ],
     "room": [
         "CREATE TABLE IF NOT EXISTS room ("
@@ -82,7 +80,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "name text NOT NULL,"
         "color text NOT NULL"
         ")",
-        "CREATE INDEX IF NOT EXISTS room_id_index  ON room(id)",
+        "CREATE INDEX IF NOT EXISTS room_id_index ON room(id)",
     ],
     "uri_user": [
         "CREATE TABLE IF NOT EXISTS uri_user ("
@@ -95,9 +93,9 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
 DB_CLASS_TO_TABLE = {
     "MoveDbBatchMove": "batch_move",
     "MoveDbMovingBox": "moving_box",
+    "MoveDbImage": "image",
     "MoveDbItem": "item",
     "MoveDbLocation": "location",
-    "MoveDbLog": "log",
     "MoveDbMoveProject": "move_project",
     "MoveDbRoom": "room",
     "MoveDbBoxScan": "box_scan",
@@ -372,6 +370,15 @@ class MoveDbMovingBox(MoveDbRecord):
         return box_data
 
 
+class MoveDbImage(MoveDbRecord):
+    """class to handle image records"""
+
+    @classmethod
+    def fields(cls):
+        """return list of the table's fields"""
+        return ["id", "imageblob", "description", "timestamp"]
+
+
 class MoveDbItem(MoveDbRecord):
     """class to handle item records"""
 
@@ -388,15 +395,6 @@ class MoveDbLocation(MoveDbRecord):
     def fields(cls):
         """return list of the table's fields"""
         return ["id", "name"]
-
-
-class MoveDbLog(MoveDbRecord):
-    """class to handle log records"""
-
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "table_name", "field_name", "old", "new", "timestamp"]
 
 
 class MoveDbMoveProject(MoveDbRecord):

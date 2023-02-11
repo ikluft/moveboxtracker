@@ -7,15 +7,14 @@ operations
     init [--key=value ...]  initialize new database
     label box_id ...        print label(s) for specified box ids (TODO: accept a range m-n)
     merge|ingest db_file    merge in an external SQLite database file, from another device
-    log                     view log
     db                      perform database operations
 
 database operations (subcommands of db subcommand)
     batch | batch_move      batch/group of moving boxes
     box | moving_box        moving box including label info
+    image                   images for boxes or items
     item                    item inside a box
     location                location where boxes may be
-    log                     log of data update events
     project | move_project  overall move project info
     room                    room at origin & destination
     scan | box_scan         box scan event on move to new location
@@ -36,15 +35,15 @@ from shutil import move
 import qrcode
 import qrcode.image.svg
 from colorlookup import Color
-from weasyprint import HTML
+from weasyprint import HTML, CSS
 from . import __version__
 from .db import (
     MoveBoxTrackerDB,
     MoveDbBatchMove,
     MoveDbMovingBox,
+    MoveDbImage,
     MoveDbItem,
     MoveDbLocation,
-    MoveDbLog,
     MoveDbMoveProject,
     MoveDbRoom,
     MoveDbBoxScan,
@@ -59,9 +58,9 @@ from .db import (
 CLI_TO_DB_CLASS = {
     "batch": MoveDbBatchMove,
     "box": MoveDbMovingBox,
+    "image": MoveDbImage,
     "item": MoveDbItem,
     "location": MoveDbLocation,
-    "log": MoveDbLog,
     "project": MoveDbMoveProject,
     "room": MoveDbRoom,
     "scan": MoveDbBoxScan,
@@ -70,6 +69,19 @@ CLI_TO_DB_CLASS = {
 
 # type alias for error strings
 ErrStr = str
+
+# CSS stylesheet for box label PDF generator
+BOX_LABEL_STYLESHEET = """
+    @page {
+        size: Letter;
+        margin: 0.2cm;
+    }
+    table {
+        width: 100%
+        table-layout: fixed;
+        font-family: sans-serif;
+    }
+    """
 
 
 def _get_version():
@@ -174,27 +186,24 @@ def _gen_label_html(box_data: dict, tmpdirpath: Path, qr_svg_file: Path) -> str:
         [
             "<html>",
             "<head>",
-            "<style>",
-            "@page { size: Letter }",
-            "</style>",
             "</head>",
-            '<body style="margin: 0"">',
-            '<table width="100%" style="font-family: sans-serif">',
+            "<body>",
+            "<table>",
             "<tr>",
-            '<td height="50%" width="50%">',
+            "<td>",
         ]
         + label_cell
-        + ["</td>", "<td>&nbsp;</td>", '<td height="50%" width="50%">']
+        + ["</td>", "<td>&nbsp;</td>", "<td>"]
         + label_cell
-        + ["</td>", "</tr>", "<tr>", '<td height="50%" width="50%">']
+        + ["</td>", "</tr>", "<tr>", "<td>"]
         + label_cell
-        + ["</td>", "<td>&nbsp;</td>", '<td height="50%" width="50%">']
+        + ["</td>", "<td>&nbsp;</td>", "<td>"]
         + label_cell
         + ["</td>", "</tr>", "</table>", "</body>", "</html>"]
     )
     html_file_path = Path(f"{tmpdirpath}/label_{box}.html")
     with open(html_file_path, "wt", encoding="utf-8") as textfile:
-        textfile.write("\n".join(label_html) + "\n")
+        textfile.write("\n".join(label_html))
     return html_file_path
 
 
@@ -220,13 +229,16 @@ def _gen_label(box_data: dict, outdir: str) -> None:
     # Simple HTML is PDF'ed & printed, then discarded when the temporary directory is removed.
     # Just build HTML strings to minimize library dependencies.
     html_file_path = _gen_label_html(box_data, tmpdirpath, qr_svg_file)
+    css = CSS(string=BOX_LABEL_STYLESHEET)
 
     # generate PDF
     label_pdf_file = Path(f"{tmpdirpath}/label_{box}.pdf")
     doc = HTML(filename=html_file_path)
     doc.write_pdf(
         target=label_pdf_file,
+        stylesheets=[css],
         attachments=[f"{tmpdirpath}/{qr_svg_file}"],
+        optimize_size=("fonts", "images"),
     )
     move(label_pdf_file, outdir)
 
@@ -256,11 +268,6 @@ def _do_merge(args: dict) -> ErrStr | None:
     raise Exception("not implemented")  # TODO
 
 
-def _do_log(args: dict) -> ErrStr | None:
-    """view log"""
-    raise Exception("not implemented")  # TODO
-
-
 def _do_dump(args: dict) -> ErrStr | None:
     """dump database contents to standard output"""
     db_file = args["db_file"]
@@ -284,7 +291,7 @@ def _do_db(args: dict) -> ErrStr | None:
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
-    # call CRUD (create, read, update, or delete) handler function
+    # call handler function:  CRUD (create, read, update, or delete)
     crud_op = args["op"]
     match crud_op:
         case "create":
@@ -409,6 +416,13 @@ def _gen_arg_subparsers_db(subparsers) -> None:
     _gen_arg_subparser_table(
         subparsers_db,
         parser_db_parent,
+        table_name="image",
+        help_str="images for boxes or items",
+        fields=_omit_id(MoveDbItem.fields()),
+    )
+    _gen_arg_subparser_table(
+        subparsers_db,
+        parser_db_parent,
         table_name="item",
         help_str="item inside a box",
         fields=_omit_id(MoveDbItem.fields()),
@@ -419,13 +433,6 @@ def _gen_arg_subparsers_db(subparsers) -> None:
         table_name="location",
         help_str="location where boxes may be",
         fields=_omit_id(MoveDbLocation.fields()),
-    )
-    _gen_arg_subparser_table(
-        subparsers_db,
-        parser_db_parent,
-        table_name="log",
-        help_str="log of data update events",
-        fields=_omit_id(MoveDbLog.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
@@ -499,12 +506,6 @@ def _gen_arg_subparsers(top_parser) -> None:
         "db_merge", nargs=1, metavar="DB2", help="database file to merge in"
     )
     parser_merge.set_defaults(func=_do_merge)
-
-    parser_log = subparsers.add_parser("log", help="view log")
-    parser_log.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_log.set_defaults(func=_do_log)
 
     parser_dump = subparsers.add_parser(
         "dump", help="dump database contents to standard output"
