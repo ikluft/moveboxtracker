@@ -117,13 +117,24 @@ def _args_to_data(args: dict, fields: list) -> dict:
     return result
 
 
+def cli_prompt(table: str, field_prompts: dict) -> dict:
+    """callback function which the database layer can use to prompt for data fields"""
+    result = {}
+    total_prompts = len(field_prompts)
+    count = 1
+    for field, prompt in field_prompts.items():
+        result[field] = input(f"({table} {count}/{total_prompts}) Enter {prompt}:")
+        count += 1
+    return result
+
+
 def _do_init(args: dict) -> ErrStr | None:
     """initialize new moving box database"""
     if "db_file" not in args:
         return "database file not specified"
     filepath = args["db_file"]
     data = _args_to_data(args, MoveDbMoveProject.fields())
-    db_obj = MoveBoxTrackerDB(filepath, data)
+    db_obj = MoveBoxTrackerDB(filepath, data, prompt=cli_prompt)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "database initialization failed"
     return None
@@ -255,8 +266,7 @@ def _do_label(args: dict) -> ErrStr | None:
     if "db_file" not in args:
         return "database file not specified"
     filepath = args["db_file"]
-    data = _args_to_data(args, MoveDbMoveProject.fields())
-    db_obj = MoveBoxTrackerDB(filepath, data)
+    db_obj = MoveBoxTrackerDB(filepath, prompt=cli_prompt)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
@@ -266,7 +276,7 @@ def _do_label(args: dict) -> ErrStr | None:
     box_id_list = args["box_id"]
     for box_id in box_id_list:
         # regular expression check for start-end range of box ids
-        match = re.fullmatch(r"^(\d+)-(\d+)$", box_id)
+        match = re.fullmatch(r"^(\d+)-(\d+)$", str(box_id))
         if match:
             # process start-end range of box ids
             start, end = match.groups()
@@ -288,7 +298,7 @@ def _do_merge(args: dict) -> ErrStr | None:
 def _do_dump(args: dict) -> ErrStr | None:
     """dump database contents to standard output"""
     db_file = args["db_file"]
-    db_obj = MoveBoxTrackerDB(db_file)
+    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
     db_obj.db_dump()
 
 
@@ -304,7 +314,7 @@ def _do_db(args: dict) -> ErrStr | None:
     table_class = CLI_TO_DB_CLASS[table_name]
     db_file = args["db_file"]
     data = _args_to_data(args, table_class.fields())
-    db_obj = MoveBoxTrackerDB(db_file)
+    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
@@ -510,7 +520,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         required=True,
         help="directory to place output PDF file(s)",
     )
-    parser_label.add_argument("box_id", nargs="+", metavar="ID", type=int)
+    parser_label.add_argument("box_id", nargs="+", metavar="ID")
     parser_label.set_defaults(func=_do_label)
 
     parser_merge = subparsers.add_parser(

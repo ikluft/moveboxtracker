@@ -3,10 +3,13 @@ database (model layer) routines for moveboxtracker
 """
 
 import sys
+import re
 from pathlib import Path
 import sqlite3
+from zlib import crc32
 from prettytable import from_db_cursor, SINGLE_BORDER
 from xdg import BaseDirectory
+from colorlookup import Color
 
 # globals
 DATA_HOME = BaseDirectory.xdg_data_home  # XDG default data directory
@@ -35,6 +38,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "CREATE TABLE IF NOT EXISTS image ("
         "id INTEGER PRIMARY KEY NOT NULL,"
         "imageblob blob NOT NULL,"
+        "crc32 integer UNIQUE NOT NULL,"
         "description text,"
         "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP"
         ");",
@@ -45,7 +49,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "id INTEGER PRIMARY KEY,"
         "box integer NOT NULL REFERENCES moving_box (id),"
         "description text NOT NULL,"
-        "image blob"
+        "image integer REFERENCES image (id)"
         ")",
         "CREATE INDEX IF NOT EXISTS item_id_index ON item(id);",
     ],
@@ -70,7 +74,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "info text NOT NULL ,"
         "room integer NOT NULL REFERENCES room (id),"
         "user integer NOT NULL REFERENCES uri_user (id),"
-        "image blob"
+        "image integer REFERENCES image (id)"
         ")",
         "CREATE INDEX IF NOT EXISTS moving_box_id_index ON moving_box(id)",
     ],
@@ -106,13 +110,17 @@ DB_CLASS_TO_TABLE = {
 class MoveBoxTrackerDB:
     """access to moving box database file"""
 
-    def __init__(self, filename, data: dict = ...):
+    def __init__(self, filename: str, data: dict = ..., prompt: callable = None):
         # construct database path from relative or absolute path
         if Path(filename).is_absolute():
             self.filepath = Path(filename)
         else:
             self.filepath = Path(f"{DATA_HOME}/{MBT_PKGNAME}/{filename}")
         # print(f"database file: {self.filepath}", file=sys.stderr)
+
+        # save user-input prompt callback function
+        if prompt is not None:
+            self.prompt = prompt
 
         # create the directory for the database file if it doesn't exist
         db_dir = self.filepath.parent
@@ -189,14 +197,36 @@ class MoveDbRecord:
 
     @classmethod
     def fields(cls):
-        """subclasses must override this to return a list of the table's fields"""
-        raise NotImplementedError
+        """return list of the table's fields"""
+        if "field_data" not in vars(cls):
+            class_name = cls.__name__
+            raise NotImplementedError(
+                f"{class_name} does not provide required field_data"
+            )
+        field_data = vars(cls)["field_data"]
+        return list(field_data.keys())
+
+    @classmethod
+    def required_fields(cls):
+        """return list of the table's required fields"""
+        if "field_data" not in vars(cls):
+            class_name = cls.__name__
+            raise NotImplementedError(
+                f"{class_name} does not provide required field_data"
+            )
+        req_fields = []
+        field_data = vars(cls)["field_data"]
+        for key in field_data.keys():
+            if getattr(field_data[key], "required", False):
+                req_fields.append(key)
+        return req_fields
 
     @classmethod
     def check_missing_fields(cls, data: dict) -> list:
         """check required fields and return list of missing fields"""
         missing = []
-        for key in cls.fields():
+        field_list = cls.required_fields()
+        for key in field_list:
             if key not in data:
                 missing.append(key)
         return missing
@@ -204,10 +234,10 @@ class MoveDbRecord:
     @classmethod
     def check_allowed_fields(cls, data: dict) -> list:
         """check allowed fields and return list of invalid fields"""
-        fields = cls.fields()
+        field_list = cls.fields()
         invalid = []
         for key in data:
-            if key not in fields:
+            if key not in field_list:
                 invalid.append(key)
         return invalid
 
@@ -220,20 +250,63 @@ class MoveDbRecord:
             )
         return DB_CLASS_TO_TABLE[cls.__name__]
 
+    def _prompt_missing_fields(self, data: dict) -> None:
+        """prompt user for missing fields"""
+        if self.mbt_db.prompt is None:
+            return
+        field_prompts = {}
+        field_data = vars(self.__class__)["field_data"]
+        table = self.__class__.table_name()
+        for key in field_data.keys():
+            if key not in data and "prompt" in field_data[key]:
+                field_prompts[key] = field_data[key]["prompt"]
+        response = self.mbt_db.prompt(table, field_prompts)
+        for key in response.keys():
+            data[key] = response[key]
+
+    def _interpolate_image(self, image_path: str) -> int | None:
+        """interpolate image file path into image record number"""
+        return MoveDbImage.get_or_create(self.mbt_db, image_path)
+
+    def _interpolate_color(self, color_name: str) -> str:
+        """validate a color name or RGB value"""
+        return Color(color_name).name.lower()
+
+    def _interpolate_fields(self, data: dict) -> None:
+        """interpolate foreign keys & image file paths into record numbers, validate color names"""
+        field_data = vars(self.__class__)["field_data"]
+        for key in data.keys():
+            if "references" in field_data[key] and not re.fullmatch(
+                r"^\d+$", data[key]
+            ):
+                # reference field value is not an integer - interpolate it
+                field_id = field_data[key]["references"].get_or_create(
+                    self.mbt_db, data[key]
+                )
+                data[key] = field_id
+            if "interpolate" in field_data[key]:
+                match field_data[key]["interpolate"]:
+                    case "image":
+                        # raises exception if image file doesn't exist or can't be read
+                        data[key] = self._interpolate_image(data[key])
+                    case "color":
+                        data[key] = self._interpolate_color(data[key])
+
     def db_create(self, data: dict) -> int:
         """create a db record"""
-
-        # verify field data is not empty
-        table = self.__class__.table_name()
-        if len(data) == 0:
-            raise RuntimeError(f"no data fields provided for new {table} record")
-
         # check data field names are valid fields
         invalid = self.__class__.check_allowed_fields(data)
         if len(invalid) > 0:
             raise RuntimeError(f"invalid fields for table initialization: {invalid}")
 
+        # prompt for missing fields if user interface provided a prompt callback
+        self._prompt_missing_fields(data)
+
+        # interpolate foreign keys, images & colors
+        self._interpolate_fields(data)
+
         # insert record
+        table = self.__class__.table_name()
         cur = self.mbt_db.conn.cursor()
         placeholder_list = []
         fields_list = data.keys()
@@ -316,23 +389,203 @@ class MoveDbRecord:
         self.mbt_db.conn.commit()
         return row_count
 
+    def kv_search(self, key: str, value: str) -> str | None:
+        """search for a key/value pair in this table, return record id"""
+        table = self.__class__.table_name()
+        cur = self.mbt_db.conn.cursor()
+        data = {key: value}
+        sql_cmd = f"SELECT id FROM {table} WHERE {key} = :{key}"
+        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        cur.execute(sql_cmd, data)
+        row = cur.fetchone()
+        cur.close()
+        if row is None:
+            return None
+        return row[0]
+
+
+class MoveDbImage(MoveDbRecord):
+    """class to handle image records"""
+
+    field_data = {
+        "id": {},
+        "imageblob": {
+            "required": True,
+            "prompt": "image file path",
+            "interpolate": "image",
+        },
+        "crc32": {"required": True},
+        "description": {"prompt": "image description"},
+        "timestamp": {},
+    }
+
+    def read_image_file(self, image_path: Path) -> int:
+        """read image file, return record id of existing or new image record for it"""
+        image_bytes = None
+        with open(image_path, "rb") as image_fp:
+            try:
+                image_bytes = image_fp.read(-1)
+            except IOError:
+                image_bytes = None
+        if image_bytes is None:
+            raise RuntimeError(f"image file {image_path} could not be read")
+        image_crc32 = crc32(image_bytes)
+
+        # if image is already in database, get record number based on CRC32
+        image_id = self.kv_search(key="crc32", value=image_crc32)
+
+        # if image wasn't found, create a new record for it
+        if image_id is None:
+            image_data = {"imageblob": image_bytes, "crc32": image_crc32}
+            image_id = self.db_create(image_data)
+        return image_id
+
+    @classmethod
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+        """return record number of image record matching path, or of newly-created record"""
+
+        # read image and compute CRC32
+        image_db = MoveDbImage(mbt_db)
+        image_path = Path(value)
+        if not image_path.exists():
+            raise RuntimeError(f"image file {image_path} does not exist")
+        return image_db.read_image_file(image_path)
+
+
+class MoveDbLocation(MoveDbRecord):
+    """class to handle location records"""
+
+    field_data = {"id": {}, "name": {"required": True, "prompt": "location name"}}
+
+    @classmethod
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+        """return record number of location record matching name, or of newly-created record"""
+
+        # if location is already in database, get record number
+        loc_db = cls(mbt_db)
+        loc_id = loc_db.kv_search(key="name", value=value)
+
+        # if location wasn't found, create a new record for it
+        if loc_id is None:
+            loc_data = {"name": value}
+            loc_id = loc_db.db_create(loc_data)
+        return loc_id
+
 
 class MoveDbBatchMove(MoveDbRecord):
     """class to handle batch_move records"""
 
+    field_data = {
+        "id": {},
+        "timestamp": {},
+        "location": {
+            "required": True,
+            "references": MoveDbLocation,
+            "prompt": "move destination location",
+        },
+    }
+
+
+class MoveDbRoom(MoveDbRecord):
+    """class to handle room records"""
+
+    field_data = {
+        "id": {},
+        "name": {"required": True, "prompt": "room name"},
+        "color": {
+            "required": True,
+            "prompt": "room label color",
+            "interpolate": "color",
+        },
+    }
+
     @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "timestamp", "location"]
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+        """return record number of room record matching name, or of newly-created record"""
+
+        # if room is already in database, get record number
+        room_db = cls(mbt_db)
+        room_id = room_db.kv_search(key="name", value=value)
+
+        # if room wasn't found, create a new record for it
+        if room_id is None:
+            room_data = {"name": value}
+            room_id = room_db.db_create(room_data)
+        return room_id
+
+
+class MoveDbURIUser(MoveDbRecord):
+    """class to handle uri_user records"""
+
+    field_data = {
+        "id": {},
+        "name": {"required": True, "prompt": "URI user name/address"},
+    }
+
+    @classmethod
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+        """return record number of uri_user record matching name, or of newly-created record"""
+
+        # if uri_user is already in database, get record number
+        user_db = cls(mbt_db)
+        user_id = user_db.kv_search(key="name", value=value)
+
+        # if uri_user wasn't found, create a new record for it
+        if user_id is None:
+            user_data = {"name": value}
+            user_id = user_db.db_create(user_data)
+        return user_id
+
+
+class MoveDbMoveProject(MoveDbRecord):
+    """class to handle mode_project records"""
+
+    field_data = {
+        "primary_user": {
+            "required": True,
+            "references": MoveDbURIUser,
+            "prompt": "URI user name/address",
+        },
+        "title": {"required": True, "prompt": "project title"},
+        "found_contact": {"required": True, "prompt": "label found/contact info"},
+    }
+
+    @staticmethod
+    def primary_user(mbt_db: MoveBoxTrackerDB) -> str:
+        """get primary user string for move project"""
+        table = MoveDbMoveProject.table_name()
+        cur = mbt_db.conn.cursor()
+        sql_cmd = f"SELECT primary_user FROM {table} WHERE id = 1"
+        print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
+        cur.execute(sql_cmd)
+        row = cur.fetchone()
+        cur.close()
+        return row[0]
 
 
 class MoveDbMovingBox(MoveDbRecord):
     """class to handle moving_box records"""
 
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "location", "info", "room", "user", "image"]
+    field_data = {
+        "id": {},
+        "location": {
+            "required": True,
+            "references": MoveDbLocation,
+            "prompt": "box location",
+        },
+        "info": {"required": True, "prompt": "box description/info"},
+        "room": {
+            "required": True,
+            "references": MoveDbRoom,
+            "prompt": "box origin/destination room",
+        },
+        "user": {
+            "required": True,
+            "references": MoveDbURIUser,
+            "generate": MoveDbMoveProject.primary_user,
+        },
+        "image": {"references": MoveDbImage},
+    }
 
     def box_label_data(self, box_id: int) -> dict:
         """return a dict of box data for generating its label"""
@@ -367,67 +620,28 @@ class MoveDbMovingBox(MoveDbRecord):
         box_data = {}
         for key in row.keys():
             box_data[key] = row[key]
+        cur.close()
         return box_data
-
-
-class MoveDbImage(MoveDbRecord):
-    """class to handle image records"""
-
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "imageblob", "description", "timestamp"]
-
-
-class MoveDbItem(MoveDbRecord):
-    """class to handle item records"""
-
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "box", "description", "image"]
-
-
-class MoveDbLocation(MoveDbRecord):
-    """class to handle location records"""
-
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "name"]
-
-
-class MoveDbMoveProject(MoveDbRecord):
-    """class to handle mode_project records"""
-
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["primary_user", "title", "found_contact"]
-
-
-class MoveDbRoom(MoveDbRecord):
-    """class to handle room records"""
-
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "name", "color"]
 
 
 class MoveDbBoxScan(MoveDbRecord):
     """class to handle box_scan records"""
 
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "box", "batch", "user", "timestamp"]
+    field_data = {
+        "id": {},
+        "box": {"required": True, "references": MoveDbMovingBox},
+        "batch": {"required": True, "references": MoveDbBatchMove},
+        "user": {"required": True, "references": MoveDbURIUser},
+        "timestamp": {},
+    }
 
 
-class MoveDbURIUser(MoveDbRecord):
-    """class to handle uri_user records"""
+class MoveDbItem(MoveDbRecord):
+    """class to handle item records"""
 
-    @classmethod
-    def fields(cls):
-        """return list of the table's fields"""
-        return ["id", "name"]
+    field_data = {
+        "id": {},
+        "box": {"required": True, "references": MoveDbMovingBox},
+        "description": {"required": True},
+        "image": {"references": MoveDbImage},
+    }
