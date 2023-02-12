@@ -56,7 +56,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     "location": [
         "CREATE TABLE IF NOT EXISTS location ("
         "id INTEGER PRIMARY KEY,"
-        "name text NOT NULL"
+        "name text UNIQUE NOT NULL"
         ")",
         "CREATE INDEX IF NOT EXISTS location_id_index ON location(id)",
     ],
@@ -81,7 +81,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     "room": [
         "CREATE TABLE IF NOT EXISTS room ("
         "id INTEGER PRIMARY KEY,"
-        "name text NOT NULL,"
+        "name text UNIQUE NOT NULL,"
         "color text NOT NULL"
         ")",
         "CREATE INDEX IF NOT EXISTS room_id_index ON room(id)",
@@ -89,7 +89,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     "uri_user": [
         "CREATE TABLE IF NOT EXISTS uri_user ("
         "id INTEGER PRIMARY KEY,"
-        "name text NOT NULL"
+        "name text UNIQUE NOT NULL"
         ")",
         "CREATE INDEX IF NOT EXISTS uri_user_id_index ON uri_user(id)",
     ],
