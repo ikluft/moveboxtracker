@@ -4,6 +4,6 @@ CREATE TABLE IF NOT EXISTS moving_box (
   info text NOT NULL ,
   room integer NOT NULL REFERENCES room (id),
   user integer NOT NULL REFERENCES uri_user (id),
-  image integer NOT NULL REFERENCES image (id) 
+  image integer REFERENCES image (id) 
 );
 CREATE INDEX IF NOT EXISTS moving_box_id_index  ON moving_box(id);
