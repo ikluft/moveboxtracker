@@ -258,8 +258,15 @@ class MoveDbRecord:
         field_data = vars(self.__class__)["field_data"]
         table = self.__class__.table_name()
         for key in field_data.keys():
-            if key not in data and "prompt" in field_data[key]:
-                field_prompts[key] = field_data[key]["prompt"]
+            if key not in data:
+                if "prompt" in field_data[key]:
+                    # use UI-provided callback to prompt the user for the missing data
+                    field_prompts[key] = field_data[key]["prompt"]
+                    continue
+                if "generate" in field_data[key]:
+                    # use a specified function to generate the field
+                    data[key] = field_data[key]["generate"](self.mbt_db)
+                    continue
         response = self.mbt_db.prompt(table, field_prompts)
         for key in response.keys():
             data[key] = response[key]
@@ -276,10 +283,12 @@ class MoveDbRecord:
         """interpolate foreign keys & image file paths into record numbers, validate color names"""
         field_data = vars(self.__class__)["field_data"]
         for key in data.keys():
-            if "references" in field_data[key] and not re.fullmatch(
-                r"^\d+$", data[key]
+            if (
+                "references" in field_data[key]
+                and not isinstance(data[key], int)
+                and not re.fullmatch(r"^\d+$", data[key])
             ):
-                # reference field value is not an integer - interpolate it
+                # reference field value is not an integer - interpolate it via reference key
                 field_id = field_data[key]["references"].get_or_create(
                     self.mbt_db, data[key]
                 )
@@ -552,10 +561,10 @@ class MoveDbMoveProject(MoveDbRecord):
 
     @staticmethod
     def primary_user(mbt_db: MoveBoxTrackerDB) -> str:
-        """get primary user string for move project"""
+        """get primary user string from move project"""
         table = MoveDbMoveProject.table_name()
         cur = mbt_db.conn.cursor()
-        sql_cmd = f"SELECT primary_user FROM {table} WHERE id = 1"
+        sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid = 1"
         print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
         cur.execute(sql_cmd)
         row = cur.fetchone()
