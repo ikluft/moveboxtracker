@@ -110,7 +110,7 @@ DB_CLASS_TO_TABLE = {
 class MoveBoxTrackerDB:
     """access to moving box database file"""
 
-    def __init__(self, filename: str, data: dict = ..., prompt: callable = None):
+    def __init__(self, filename: str, data: dict = None, prompt: callable = None):
         # construct database path from relative or absolute path
         if Path(filename).is_absolute():
             self.filepath = Path(filename)
@@ -262,18 +262,16 @@ class MoveDbRecord:
                 if "prompt" in field_data[key]:
                     # use UI-provided callback to prompt the user for the missing data
                     field_prompts[key] = field_data[key]["prompt"]
-                    continue
-                if "generate" in field_data[key]:
-                    # use a specified function to generate the field
-                    data[key] = field_data[key]["generate"](self.mbt_db)
-                    continue
         response = self.mbt_db.prompt(table, field_prompts)
         for key in response.keys():
             data[key] = response[key]
 
-    def _interpolate_image(self, image_path: str) -> int | None:
+    def _interpolate_image(self, image_path: str, data: dict) -> None:
         """interpolate image file path into image record number"""
-        return MoveDbImage.get_or_create(self.mbt_db, image_path)
+        image_db = MoveDbImage(self.mbt_db)
+        (image_bytes, image_crc32) = image_db.read_image_file(image_path)
+        data["imageblob"] = image_bytes
+        data["crc32"] = image_crc32
 
     def _interpolate_color(self, color_name: str) -> str:
         """validate a color name or RGB value"""
@@ -282,7 +280,8 @@ class MoveDbRecord:
     def _interpolate_fields(self, data: dict) -> None:
         """interpolate foreign keys & image file paths into record numbers, validate color names"""
         field_data = vars(self.__class__)["field_data"]
-        for key in data.keys():
+        data_keys = list(data.keys())  # separate list because dict gets modified
+        for key in data_keys:
             if (
                 "references" in field_data[key]
                 and not isinstance(data[key], int)
@@ -290,16 +289,30 @@ class MoveDbRecord:
             ):
                 # reference field value is not an integer - interpolate it via reference key
                 field_id = field_data[key]["references"].get_or_create(
-                    self.mbt_db, data[key]
+                    self.mbt_db, data[key], data
                 )
                 data[key] = field_id
             if "interpolate" in field_data[key]:
                 match field_data[key]["interpolate"]:
                     case "image":
                         # raises exception if image file doesn't exist or can't be read
-                        data[key] = self._interpolate_image(data[key])
+                        self._interpolate_image(data[key], data)
                     case "color":
                         data[key] = self._interpolate_color(data[key])
+
+    def _generate_fields(self, data: dict) -> None:
+        """prompt user for missing fields"""
+        field_data = vars(self.__class__)["field_data"]
+        for key in field_data.keys():
+            if key not in data:
+                if "generate" in field_data[key]:
+                    # use a specified function to generate the field
+                    generate_func = field_data[key]["generate"]
+                    if not callable(generate_func) and str(generate_func) in vars(
+                        self.__class__
+                    ):
+                        generate_func = vars(self.__class__)[generate_func]
+                    data[key] = generate_func(self, data)
 
     def db_create(self, data: dict) -> int:
         """create a db record"""
@@ -313,6 +326,9 @@ class MoveDbRecord:
 
         # interpolate foreign keys, images & colors
         self._interpolate_fields(data)
+
+        # auto-generate fields last because they could depend on other provided data
+        self._generate_fields(data)
 
         # insert record
         table = self.__class__.table_name()
@@ -423,12 +439,15 @@ class MoveDbImage(MoveDbRecord):
             "prompt": "image file path",
             "interpolate": "image",
         },
-        "crc32": {"required": True},
+        "crc32": {
+            "required": True,
+            "generate": "gen_crc32",
+        },  # forward reference as str
         "description": {"prompt": "image description"},
         "timestamp": {},
     }
 
-    def read_image_file(self, image_path: Path) -> int:
+    def read_image_file(self, image_path: Path) -> (bytes, str):
         """read image file, return record id of existing or new image record for it"""
         image_bytes = None
         with open(image_path, "rb") as image_fp:
@@ -439,18 +458,10 @@ class MoveDbImage(MoveDbRecord):
         if image_bytes is None:
             raise RuntimeError(f"image file {image_path} could not be read")
         image_crc32 = crc32(image_bytes)
-
-        # if image is already in database, get record number based on CRC32
-        image_id = self.kv_search(key="crc32", value=image_crc32)
-
-        # if image wasn't found, create a new record for it
-        if image_id is None:
-            image_data = {"imageblob": image_bytes, "crc32": image_crc32}
-            image_id = self.db_create(image_data)
-        return image_id
+        return (image_bytes, image_crc32)
 
     @classmethod
-    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
         """return record number of image record matching path, or of newly-created record"""
 
         # read image and compute CRC32
@@ -458,7 +469,25 @@ class MoveDbImage(MoveDbRecord):
         image_path = Path(value)
         if not image_path.exists():
             raise RuntimeError(f"image file {image_path} does not exist")
-        return image_db.read_image_file(image_path)
+
+        (image_bytes, image_crc32) = image_db.read_image_file(image_path)
+        # if image is already in database, get record number based on CRC32
+        image_id = image_db.kv_search(key="crc32", value=image_crc32)
+
+        # if image wasn't found, create a new record for it
+        if image_id is None:
+            data["imageblob"] = image_bytes
+            data["crc32"] = image_crc32
+            image_id = image_db.db_create(data)
+        return image_id
+
+    def gen_crc32(self, data: dict) -> str:
+        """get crc32 from image blob"""
+        if "imageblob" not in data:
+            raise RuntimeError(
+                "imageblob not found in query data - can't generate crc32 value"
+            )
+        data["crc32"] = crc32(data["imageblob"])
 
 
 class MoveDbLocation(MoveDbRecord):
@@ -467,7 +496,7 @@ class MoveDbLocation(MoveDbRecord):
     field_data = {"id": {}, "name": {"required": True, "prompt": "location name"}}
 
     @classmethod
-    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
         """return record number of location record matching name, or of newly-created record"""
 
         # if location is already in database, get record number
@@ -476,8 +505,8 @@ class MoveDbLocation(MoveDbRecord):
 
         # if location wasn't found, create a new record for it
         if loc_id is None:
-            loc_data = {"name": value}
-            loc_id = loc_db.db_create(loc_data)
+            data["name"] = value
+            loc_id = loc_db.db_create(data)
         return loc_id
 
 
@@ -509,7 +538,7 @@ class MoveDbRoom(MoveDbRecord):
     }
 
     @classmethod
-    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
         """return record number of room record matching name, or of newly-created record"""
 
         # if room is already in database, get record number
@@ -518,8 +547,8 @@ class MoveDbRoom(MoveDbRecord):
 
         # if room wasn't found, create a new record for it
         if room_id is None:
-            room_data = {"name": value}
-            room_id = room_db.db_create(room_data)
+            data["name"] = value
+            room_id = room_db.db_create(data)
         return room_id
 
 
@@ -532,7 +561,7 @@ class MoveDbURIUser(MoveDbRecord):
     }
 
     @classmethod
-    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str) -> int:
+    def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
         """return record number of uri_user record matching name, or of newly-created record"""
 
         # if uri_user is already in database, get record number
@@ -541,8 +570,8 @@ class MoveDbURIUser(MoveDbRecord):
 
         # if uri_user wasn't found, create a new record for it
         if user_id is None:
-            user_data = {"name": value}
-            user_id = user_db.db_create(user_data)
+            data["name"] = value
+            user_id = user_db.db_create(data)
         return user_id
 
 
@@ -558,18 +587,6 @@ class MoveDbMoveProject(MoveDbRecord):
         "title": {"required": True, "prompt": "project title"},
         "found_contact": {"required": True, "prompt": "label found/contact info"},
     }
-
-    @staticmethod
-    def primary_user(mbt_db: MoveBoxTrackerDB) -> str:
-        """get primary user string from move project"""
-        table = MoveDbMoveProject.table_name()
-        cur = mbt_db.conn.cursor()
-        sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid = 1"
-        print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
-        cur.execute(sql_cmd)
-        row = cur.fetchone()
-        cur.close()
-        return row[0]
 
 
 class MoveDbMovingBox(MoveDbRecord):
@@ -591,7 +608,7 @@ class MoveDbMovingBox(MoveDbRecord):
         "user": {
             "required": True,
             "references": MoveDbURIUser,
-            "generate": MoveDbMoveProject.primary_user,
+            "generate": "gen_primary_user",
         },
         "image": {"references": MoveDbImage},
     }
@@ -631,6 +648,18 @@ class MoveDbMovingBox(MoveDbRecord):
             box_data[key] = row[key]
         cur.close()
         return box_data
+
+    def gen_primary_user(self, data: dict) -> str:
+        """get primary user string from move project"""
+        del data  # unused, provided to all "generate" handlers
+        table = MoveDbMoveProject.table_name()
+        cur = self.mbt_db.conn.cursor()
+        sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid = 1"
+        print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
+        cur.execute(sql_cmd)
+        row = cur.fetchone()
+        cur.close()
+        return row[0]
 
 
 class MoveDbBoxScan(MoveDbRecord):
