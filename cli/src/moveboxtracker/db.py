@@ -112,15 +112,15 @@ class MoveBoxTrackerDB:
 
     def __init__(self, filename: str, data: dict = None, prompt: callable = None):
         # construct database path from relative or absolute path
-        if Path(filename).is_absolute():
+        if Path(filename).exists() or Path(filename).is_absolute():
             self.filepath = Path(filename)
         else:
             self.filepath = Path(f"{DATA_HOME}/{MBT_PKGNAME}/{filename}")
         # print(f"database file: {self.filepath}", file=sys.stderr)
 
         # save user-input prompt callback function
-        if prompt is not None:
-            self.prompt = prompt
+        # default should be saved too: None indicates prompt not available
+        self.prompt = prompt
 
         # create the directory for the database file if it doesn't exist
         db_dir = self.filepath.parent
@@ -140,14 +140,15 @@ class MoveBoxTrackerDB:
 
     def _init_db(self, data: dict) -> None:
         """initialize database file from SQL schema statements"""
-        # check required data fields
-        if data is None:
-            raise RuntimeError(
-                "data for move_project is needed to initialize a new database"
-            )
-        missing = MoveDbMoveProject.check_missing_fields(data)
-        if len(missing) > 0:
-            raise RuntimeError(f"missing data for table initialization: {missing}")
+        # check required data fields if UI didn't privide a prompt-callback
+        if self.prompt is None:
+            if data is None:
+                raise RuntimeError(
+                    "data for move_project is needed to initialize a new database"
+                )
+            missing = MoveDbMoveProject.check_missing_fields(data)
+            if len(missing) > 0:
+                raise RuntimeError(f"missing data for table initialization: {missing}")
 
         # run SQLite pragmas, if any were defined
         for sql_line in MBT_SCHEMA_PRAGMAS:
