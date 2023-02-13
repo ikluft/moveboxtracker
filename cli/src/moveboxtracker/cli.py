@@ -123,7 +123,9 @@ def cli_prompt(table: str, field_prompts: dict) -> dict:
     total_prompts = len(field_prompts)
     count = 1
     for field, prompt in field_prompts.items():
-        result[field] = input(f"({table} {count}/{total_prompts}) Enter {prompt}:")
+        input_value = input(f"({table} {count}/{total_prompts}) Enter {prompt}:")
+        if len(input_value) > 0:
+            result[field] = input_value
         count += 1
     return result
 
