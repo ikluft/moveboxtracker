@@ -173,7 +173,7 @@ def _gen_label_html(box_data: dict, tmpdirpath: Path, qr_svg_file: Path) -> str:
 
     # collect parameters
     box = str(box_data["box"]).zfill(4)
-    color = Color(box_data["color"]).name.lower()
+    color = Color(box_data["color"]).name.replace(" ", "")
     room = str(box_data["room"]).upper()
 
     # generate label cell
@@ -233,7 +233,7 @@ def _gen_label(box_data: dict, outdir: str) -> None:
     # collect parameters
     user = str(box_data["user"])
     box = str(box_data["box"]).zfill(4)
-    color = Color(box_data["color"]).name.lower()
+    color = Color(box_data["color"]).name.replace(" ", "")
     room = str(box_data["room"]).upper()
 
     # verify output directory exists
