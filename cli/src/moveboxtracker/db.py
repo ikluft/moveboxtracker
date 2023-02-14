@@ -331,6 +331,10 @@ class MoveDbRecord:
         # auto-generate fields last because they could depend on other provided data
         self._generate_fields(data)
 
+        # safety net against empty records (SQLite would flag a syntax error for "()" )
+        if len(data) == 0:
+            raise RuntimeError("cannot insert record with empty data")
+
         # insert record
         table = self.__class__.table_name()
         cur = self.mbt_db.conn.cursor()
