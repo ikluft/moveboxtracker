@@ -269,6 +269,8 @@ class MoveDbRecord:
 
     def _interpolate_image(self, image_path: str, data: dict) -> None:
         """interpolate image file path into image record number"""
+        if "imageblob" in data and "crc32" in data:
+            return  # do not interpolate image twice
         image_db = MoveDbImage(self.mbt_db)
         (image_bytes, image_crc32) = image_db.read_image_file(image_path)
         data["imageblob"] = image_bytes
@@ -375,17 +377,14 @@ class MoveDbRecord:
     def db_update(self, data: dict) -> int:
         """update a db record by id"""
 
-        # verify field data is not empty
-        table = self.__class__.table_name()
-        if len(data) == 0:
-            raise RuntimeError(f"no data fields provided for {table} record update")
+        # interpolate foreign keys, images & colors
+        self._interpolate_fields(data)
 
-        # check data field names are valid fields
-        invalid = self.__class__.check_allowed_fields(data)
-        if len(invalid) > 0:
-            raise RuntimeError(f"invalid fields for table initialization: {invalid}")
+        # auto-generate fields last because they could depend on other provided data
+        self._generate_fields(data)
 
         # update record
+        table = self.__class__.table_name()
         cur = self.mbt_db.conn.cursor()
         placeholder_list = []
         fields_list = data.keys()
@@ -481,9 +480,13 @@ class MoveDbImage(MoveDbRecord):
 
         # if image wasn't found, create a new record for it
         if image_id is None:
-            data["imageblob"] = image_bytes
-            data["crc32"] = image_crc32
-            image_id = image_db.db_create(data)
+            newrec_data = {}
+            for key in cls.fields():
+                if key in data:
+                    newrec_data[key] = data[key]
+            newrec_data["imageblob"] = image_bytes
+            newrec_data["crc32"] = image_crc32
+            image_id = image_db.db_create(newrec_data)
         return image_id
 
     def gen_crc32(self, data: dict) -> str:
@@ -503,6 +506,7 @@ class MoveDbLocation(MoveDbRecord):
     @classmethod
     def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
         """return record number of location record matching name, or of newly-created record"""
+        del data  # unused
 
         # if location is already in database, get record number
         loc_db = cls(mbt_db)
@@ -510,8 +514,9 @@ class MoveDbLocation(MoveDbRecord):
 
         # if location wasn't found, create a new record for it
         if loc_id is None:
-            data["name"] = value
-            loc_id = loc_db.db_create(data)
+            newrec_data = {}
+            newrec_data["name"] = value
+            loc_id = loc_db.db_create(newrec_data)
         return loc_id
 
 
@@ -552,8 +557,12 @@ class MoveDbRoom(MoveDbRecord):
 
         # if room wasn't found, create a new record for it
         if room_id is None:
-            data["name"] = value
-            room_id = room_db.db_create(data)
+            newrec_data = {}
+            for key in cls.fields():
+                if key in data:
+                    newrec_data[key] = data[key]
+            newrec_data["name"] = value
+            room_id = room_db.db_create(newrec_data)
         return room_id
 
 
@@ -568,6 +577,7 @@ class MoveDbURIUser(MoveDbRecord):
     @classmethod
     def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
         """return record number of uri_user record matching name, or of newly-created record"""
+        del data  # unused
 
         # if uri_user is already in database, get record number
         user_db = cls(mbt_db)
@@ -575,8 +585,9 @@ class MoveDbURIUser(MoveDbRecord):
 
         # if uri_user wasn't found, create a new record for it
         if user_id is None:
-            data["name"] = value
-            user_id = user_db.db_create(data)
+            newrec_data = {}
+            newrec_data["name"] = value
+            user_id = user_db.db_create(newrec_data)
         return user_id
 
 
