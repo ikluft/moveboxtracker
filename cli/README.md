@@ -1,9 +1,10 @@
-moveboxtracker Command-line Interface
--------------------------------------
+# moveboxtracker Command-line Interface
 
 The CLI for moveboxtracker manages an SQLite database file containing moving
 box data. It prints labels, four to a page, including features I wanted for
 tracking a move based on my experience and advice I found online.
+
+## Project overview
 
 Features of the moving box labels:
 * box number for database lookup
@@ -35,3 +36,22 @@ Features of mobile app (upcoming):
 * no plans for an iOS app unless others want to help with that
 
 ![example moving label printout page](doc/label-pdf-example.png "example moving label printout page")
+
+## Command-line usage
+
+The moveboxtracker CLI uses subcommands for different functions and database elements.
+These are issued like "moveboxtracker <subcommand> <subcommand-args>"
+At any level the --help parameter can show a list of subcommands and options.
+
+The top-level subcommands are
+> init                initialize new moving box database
+> label               print label(s) for specified box ids
+> merge               merge in an external SQLite database file, from another device
+> dump                dump database contents to standard output
+> db                  low-level database access subcommands
+
+### init subcommand
+
+Before a database can be used, the SQLite database file needs to be initialized.
+The usage is as follows:
+> moveboxtracker init [-h] [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] DB
