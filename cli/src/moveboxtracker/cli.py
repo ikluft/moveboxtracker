@@ -500,9 +500,9 @@ def _gen_arg_subparsers(top_parser) -> None:
     parser_init = subparsers.add_parser(
         "init", help="initialize new moving box database"
     )
-    parser_init.add_argument("--primary_user", "--user", required=True)
-    parser_init.add_argument("--title", required=True)
-    parser_init.add_argument("--found_contact", "--found", "--contact", required=True)
+    parser_init.add_argument("--primary_user", "--user")
+    parser_init.add_argument("--title")
+    parser_init.add_argument("--found_contact", "--found", "--contact")
     parser_init.add_argument(
         "db_file", action="store", metavar="DB", help="database file"
     )
