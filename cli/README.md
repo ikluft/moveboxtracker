@@ -55,3 +55,12 @@ The top-level subcommands are
 Before a database can be used, the SQLite database file needs to be initialized.
 The usage is as follows:
 > moveboxtracker init [-h] [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] DB
+
+When created the database contains table definitions but no records in any of the tables.
+
+### label subcommand
+
+Printing a label from the database requires providing the database file, a box ID number and a PDF output file. From the database it will also retrieve the lost/found contact info, room name and room color code. Labels are printed duplicated 4 times on a page to have enough to place on 4 sides of a moving box. If more than one box ID number is provided, one page will be made for each set of labels. The resulting PDF file can be sent to any standard printer.
+> moveboxtracker label [-h] --outdir PDFFILE DB ID [ID ...]
+
+By default moveboxtracker generates PDF output for US Letter size pages. To use a different page size, set the MBT_PAGE_SIZE environment variable before running the script. For example "export MBT_PAGE_SIZE=A3".
