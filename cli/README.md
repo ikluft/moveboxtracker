@@ -44,11 +44,11 @@ These are issued like "moveboxtracker <subcommand> <subcommand-args>"
 At any level the --help parameter can show a list of subcommands and options.
 
 The top-level subcommands are
-> init                initialize new moving box database
-> label               print label(s) for specified box ids
-> merge               merge in an external SQLite database file, from another device
-> dump                dump database contents to standard output
-> db                  low-level database access subcommands
+- init:   initialize new moving box database
+- label:  print label(s) for specified box ids
+- merge:  merge in an external SQLite database file, from another device
+- dump:   dump database contents to standard output
+- db:     low-level database access subcommands
 
 ### init subcommand
 
