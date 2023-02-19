@@ -63,4 +63,8 @@ When created the database contains table definitions but no records in any of th
 Printing a label from the database requires providing the database file, a box ID number and a PDF output file. From the database it will also retrieve the lost/found contact info, room name and room color code. Labels are printed duplicated 4 times on a page to have enough to place on 4 sides of a moving box. If more than one box ID number is provided, one page will be made for each set of labels. The resulting PDF file can be sent to any standard printer.
 > moveboxtracker label [-h] --outdir PDFFILE DB ID [ID ...]
 
-By default moveboxtracker generates PDF output for US Letter size pages. To use a different page size, set the MBT_PAGE_SIZE environment variable before running the script. For example "export MBT_PAGE_SIZE=A3".
+By default moveboxtracker generates PDF output for US Letter size pages. To use a different page size, set the MBT_PAGE_SIZE environment variable before running the script. For example, to use A3 size pages, set "export MBT_PAGE_SIZE=A3" in your shell or its rc setup script before running moveboxtracker.
+
+### merge subcommand
+
+The merge command is not yet implemented. It will collect data from another SQLite database made by the moveboxtracker program or app into the one used by this instance. In particular this is intended as intake for data from the moveboxtracker Android app.
