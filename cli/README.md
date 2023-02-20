@@ -67,4 +67,9 @@ By default moveboxtracker generates PDF output for US Letter size pages. To use 
 
 ### merge subcommand
 
-The merge command is not yet implemented. It will collect data from another SQLite database made by the moveboxtracker program or app into the one used by this instance. In particular this is intended as intake for data from the moveboxtracker Android app.
+The merge subcommand is not yet implemented. It will collect data from another SQLite database made by the moveboxtracker program or app into the one used by this instance. In particular this is intended as intake for data from the moveboxtracker Android app.
+
+### dump subcommand
+
+The dump subcommand prints out the contents of the SQLite database file. The path to the database file is a required parameter.
+> moveboxtracker dump [-h] DB
