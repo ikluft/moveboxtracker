@@ -73,3 +73,20 @@ The merge subcommand is not yet implemented. It will collect data from another S
 
 The dump subcommand prints out the contents of the SQLite database file. The path to the database file is a required parameter.
 > moveboxtracker dump [-h] DB
+
+### db subcommand
+
+The db subcommand provides direct access to the database tables with create, read, update or delete (“CRUD”)
+operations. 
+> moveboxtracker db [-h] {batch,box,image,item,location,project,room,scan,user} {create,read,update,delete} ...
+
+The database tables are:
+* batch: batch/group of moving boxes
+* box: moving box including label info
+* image: images for boxes or items
+* item: item inside a box
+* location: location where boxes may be
+* project: overall move project info
+* room: room at origin & destination
+* scan: box scan event on move to new location
+* user: user who owns database or performs a box scan
