@@ -39,6 +39,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "id INTEGER PRIMARY KEY NOT NULL,"
         "imageblob blob NOT NULL,"
         "crc32 integer UNIQUE NOT NULL,"
+        "mimetype text NOT NULL,"
         "description text,"
         "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP"
         ");",
@@ -447,8 +448,12 @@ class MoveDbImage(MoveDbRecord):
             "required": True,
             "generate": "gen_crc32",
         },  # forward reference as str
+        "mimetype": {},
         "description": {"prompt": "image description"},
-        "timestamp": {},
+        "timestamp": {
+            "required": True,
+            "generate": "gen_mimetype",
+        },  # forward reference as str
     }
 
     def read_image_file(self, image_path: Path) -> (bytes, str):
@@ -496,6 +501,14 @@ class MoveDbImage(MoveDbRecord):
                 "imageblob not found in query data - can't generate crc32 value"
             )
         data["crc32"] = crc32(data["imageblob"])
+
+    def gen_mimetype(self, data: dict) -> str:
+        """get mimetype from image data"""
+        if "mimetype" not in data:
+            raise RuntimeError(
+                "mimetype not found in query data - can't generate value"
+            )
+        data["mimetype"] = data["mimetype"]
 
 
 class MoveDbLocation(MoveDbRecord):
