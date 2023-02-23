@@ -90,3 +90,13 @@ The database tables are:
 * room: room at origin & destination
 * scan: box scan event on move to new location
 * user: user who owns database or performs a box scan
+
+Each of the tables supports command-line options named for fields in order to set values.
+Fields are required if the database defines them with a "NOT NULL" constraint.
+
+#### batch table
+
+Each record in the batch table is a group of boxes moved together.
+They should be added to the batch as they are loaded into the vehicle.
+> moveboxtracker db batch [-h] --file DB [--timestamp TIMESTAMP] [--location LOCATION] {create,read,update,delete} [id]
+
