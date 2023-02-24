@@ -100,3 +100,13 @@ Each record in the batch table is a group of boxes moved together.
 They should be added to the batch as they are loaded into the vehicle.
 > moveboxtracker db batch [-h] --file DB [--timestamp TIMESTAMP] [--location LOCATION] {create,read,update,delete} [id]
 
+#### box table
+
+Each record in the box table is either a moving box or some other labeled item.
+For the database's purposes, everything that gets tracked and has a label is simplified to be called a box.
+Any labelled thing, whether or not it is actually a box, will be tracked in the database as a box.
+For example, a framed picture or a chair also get a label with a "box" number.
+> moveboxtracker db box [-h] --file DB [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] {create,read,update,delete} [id]
+
+Things that go inside a box are in the item table.
+
