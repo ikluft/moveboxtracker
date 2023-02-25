@@ -110,3 +110,10 @@ For example, a framed picture or a chair also get a label with a "box" number.
 
 Things that go inside a box are in the item table.
 
+#### image table
+
+Each record in the image table contains a photo stored as a blob (binary large object).
+It also has a CRC32 hash to recognize if the same image is already in the database.
+A field for the MIME type tells what kind of image it is, and allows looking up what program can display it.
+Images in this table can be referenced by ID from the box or item tables.
+> moveboxtracker db image [-h] --file DB [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
