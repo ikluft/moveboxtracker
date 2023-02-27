@@ -117,3 +117,9 @@ It also has a CRC32 hash to recognize if the same image is already in the databa
 A field for the MIME type tells what kind of image it is, and allows looking up what program can display it.
 Images in this table can be referenced by ID from the box or item tables.
 > moveboxtracker db image [-h] --file DB [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
+
+#### item table
+
+Each record in the item table is something that goes inside a box. Each item has a required reference to the box
+that contains it, required description text and an optional reference to an image of the item.
+> moveboxtracker db item [-h] --file DB [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
