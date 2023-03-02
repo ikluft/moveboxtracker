@@ -123,3 +123,11 @@ Images in this table can be referenced by ID from the box or item tables.
 Each record in the item table is something that goes inside a box. Each item has a required reference to the box
 that contains it, required description text and an optional reference to an image of the item.
 > moveboxtracker db item [-h] --file DB [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
+
+#### location table
+
+Each record in the location table is a place where boxes can be at any stage of a move operation.
+Likely examples would be the origin, one or more storage or staging areas, and the destination.
+The only field (other than the record ID number) is a text name.
+The name needs only to be meaningful to the people working on the move.
+> moveboxtracker db location [-h] --file DB [--name NAME] {create,read,update,delete} [id]
