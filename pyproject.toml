@@ -27,7 +27,7 @@ dependencies = [
 
 [project.urls]
 Home = "https://github.com/ikluft/moveboxtracker"
-Source = "https://github.com/ikluft/moveboxtracker/tree/main/cli"
+Source = "https://github.com/ikluft/moveboxtracker/"
 Bug_Tracker = "https://github.com/ikluft/moveboxtracker/issues"
 
 [project.scripts]
