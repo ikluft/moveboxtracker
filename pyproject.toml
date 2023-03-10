@@ -30,6 +30,8 @@ Home = "https://github.com/ikluft/moveboxtracker"
 Source = "https://github.com/ikluft/moveboxtracker/tree/main/cli"
 Bug_Tracker = "https://github.com/ikluft/moveboxtracker/issues"
 
+[project.scripts]
+movebox = "moveboxtracker.cli:run"
 
 [project.optional-dependencies]
 test = [
