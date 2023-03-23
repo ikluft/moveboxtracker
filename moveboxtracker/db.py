@@ -37,7 +37,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     "image": [
         "CREATE TABLE IF NOT EXISTS image ("
         "id INTEGER PRIMARY KEY NOT NULL,"
-        "imageblob blob NOT NULL,"
+        "image_file text UNIQUE NOT NULL,"
         "crc32 integer UNIQUE NOT NULL,"
         "mimetype text NOT NULL,"
         "description text,"
@@ -270,11 +270,12 @@ class MoveDbRecord:
 
     def _interpolate_image(self, image_path: str, data: dict) -> None:
         """interpolate image file path into image record number"""
-        if "imageblob" in data and "crc32" in data:
+        if "image_file" in data and "crc32" in data:
             return  # do not interpolate image twice
         image_db = MoveDbImage(self.mbt_db)
         (image_bytes, image_crc32) = image_db.read_image_file(image_path)
-        data["imageblob"] = image_bytes
+        # TODO - process mime type
+        data["image_file"] = image_path
         data["crc32"] = image_crc32
 
     def _interpolate_color(self, color_name: str) -> str:
@@ -439,7 +440,7 @@ class MoveDbImage(MoveDbRecord):
 
     field_data = {
         "id": {},
-        "imageblob": {
+        "image_file": {
             "required": True,
             "prompt": "image file path",
             "interpolate": "image",
@@ -467,6 +468,8 @@ class MoveDbImage(MoveDbRecord):
         if image_bytes is None:
             raise RuntimeError(f"image file {image_path} could not be read")
         image_crc32 = crc32(image_bytes)
+        # TODO - symlink or copy file to app directory
+        # TODO - process mime type
         return (image_bytes, image_crc32)
 
     @classmethod
@@ -489,18 +492,19 @@ class MoveDbImage(MoveDbRecord):
             for key in cls.fields():
                 if key in data:
                     newrec_data[key] = data[key]
-            newrec_data["imageblob"] = image_bytes
+            newrec_data["image_file"] = image_path
             newrec_data["crc32"] = image_crc32
+            # TODO - save mime type
             image_id = image_db.db_create(newrec_data)
         return image_id
 
     def gen_crc32(self, data: dict) -> str:
         """get crc32 from image blob"""
-        if "imageblob" not in data:
+        if "image_file" not in data:
             raise RuntimeError(
-                "imageblob not found in query data - can't generate crc32 value"
+                "image_file not found in query data - can't generate crc32 value"
             )
-        data["crc32"] = crc32(data["imageblob"])
+        data["crc32"] = crc32(data["image_file"])  # TODO - catch up with change from blob to path
 
     def gen_mimetype(self, data: dict) -> str:
         """get mimetype from image data"""
