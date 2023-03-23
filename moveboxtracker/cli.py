@@ -447,7 +447,7 @@ def _gen_arg_subparsers_db(subparsers) -> None:
         parser_db_parent,
         table_name="image",
         help_str="images for boxes or items",
-        fields=_omit_id(MoveDbItem.fields()),
+        fields=_omit_id(MoveDbImage.fields()),
     )
     _gen_arg_subparser_table(
         subparsers_db,
