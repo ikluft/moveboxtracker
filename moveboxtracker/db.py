@@ -5,6 +5,7 @@ database (model layer) routines for moveboxtracker
 import sys
 import re
 from pathlib import Path
+import mimetypes
 import sqlite3
 from zlib import crc32
 from prettytable import from_db_cursor, SINGLE_BORDER
@@ -39,7 +40,8 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "id INTEGER PRIMARY KEY NOT NULL,"
         "image_file text UNIQUE NOT NULL,"
         "crc32 integer UNIQUE NOT NULL,"
-        "mimetype text NOT NULL,"
+        "mimetype text,"
+        "encoding text,"
         "description text,"
         "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP"
         ");",
@@ -273,9 +275,10 @@ class MoveDbRecord:
         if "image_file" in data and "crc32" in data:
             return  # do not interpolate image twice
         image_db = MoveDbImage(self.mbt_db)
-        (image_bytes, image_crc32) = image_db.read_image_file(image_path)
-        # TODO - process mime type
+        (image_mimetype, image_encoding, image_crc32) = image_db.read_image_file(image_path)
         data["image_file"] = image_path
+        data["mimetype"] = image_mimetype
+        data["encoding"] = image_encoding
         data["crc32"] = image_crc32
 
     def _interpolate_color(self, color_name: str) -> str:
@@ -450,6 +453,7 @@ class MoveDbImage(MoveDbRecord):
             "generate": "gen_crc32",
         },  # forward reference as str
         "mimetype": {},
+        "encoding": {},
         "description": {"prompt": "image description"},
         "timestamp": {
             "required": True,
@@ -469,8 +473,8 @@ class MoveDbImage(MoveDbRecord):
             raise RuntimeError(f"image file {image_path} could not be read")
         image_crc32 = crc32(image_bytes)
         # TODO - symlink or copy file to app directory
-        # TODO - process mime type
-        return (image_bytes, image_crc32)
+        (image_mimetype, image_encoding) = mimetypes.guess_type(image_path, strict=False)
+        return (image_mimetype, image_encoding, image_crc32)
 
     @classmethod
     def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
@@ -482,7 +486,7 @@ class MoveDbImage(MoveDbRecord):
         if not image_path.exists():
             raise RuntimeError(f"image file {image_path} does not exist")
 
-        (image_bytes, image_crc32) = image_db.read_image_file(image_path)
+        (image_mimetype, image_encoding, image_crc32) = image_db.read_image_file(image_path)
         # if image is already in database, get record number based on CRC32
         image_id = image_db.kv_search(key="crc32", value=image_crc32)
 
@@ -493,8 +497,9 @@ class MoveDbImage(MoveDbRecord):
                 if key in data:
                     newrec_data[key] = data[key]
             newrec_data["image_file"] = image_path
+            newrec_data["mimetype"] = image_mimetype
+            newrec_data["encoding"] = image_encoding
             newrec_data["crc32"] = image_crc32
-            # TODO - save mime type
             image_id = image_db.db_create(newrec_data)
         return image_id
 

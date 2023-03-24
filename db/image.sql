@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS image (
   id INTEGER PRIMARY KEY NOT NULL,
   image_file text UNIQUE NOT NULL,
   crc32 integer UNIQUE NOT NULL,
-  mimetype text NOT NULL,
+  mimetype text,
+  encoding text,
   description text,
   timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
