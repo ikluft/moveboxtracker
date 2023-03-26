@@ -5,9 +5,9 @@ database (model layer) routines for moveboxtracker
 import sys
 import re
 from pathlib import Path
+import hashlib
 import mimetypes
 import sqlite3
-from zlib import crc32
 from prettytable import from_db_cursor, SINGLE_BORDER
 from xdg import BaseDirectory
 from colorlookup import Color
@@ -39,7 +39,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "CREATE TABLE IF NOT EXISTS image ("
         "id INTEGER PRIMARY KEY NOT NULL,"
         "image_file text UNIQUE NOT NULL,"
-        "crc32 integer UNIQUE NOT NULL,"
+        "hash integer UNIQUE NOT NULL,"
         "mimetype text,"
         "encoding text,"
         "description text,"
@@ -113,12 +113,24 @@ DB_CLASS_TO_TABLE = {
 class MoveBoxTrackerDB:
     """access to moving box database file"""
 
+    @staticmethod
+    def _data_home() -> Path:
+        """return XDG_DATA_HOME-based app data path"""
+        datahome_path = Path(DATA_HOME) / MBT_PKGNAME
+        if not datahome_path.exists():
+            datahome_path.mkdir(mode=0o770, parents=True, exist_ok=True)
+        if not datahome_path.is_dir():
+            raise RuntimeError(
+                f"cannot create data storage: {datahome_path} exists but is not a directory"
+            )
+        return datahome_path
+
     def __init__(self, filename: str, data: dict = None, prompt: callable = None):
         # construct database path from relative or absolute path
         if Path(filename).exists() or Path(filename).is_absolute():
             self.filepath = Path(filename)
         else:
-            self.filepath = Path(f"{DATA_HOME}/{MBT_PKGNAME}/{filename}")
+            self.filepath = MoveBoxTrackerDB._data_home() / filename
         # print(f"database file: {self.filepath}", file=sys.stderr)
 
         # save user-input prompt callback function
@@ -128,9 +140,12 @@ class MoveBoxTrackerDB:
         # create the directory for the database file if it doesn't exist
         db_dir = self.filepath.parent
         if not db_dir.is_dir():
-            db_dir.mkdir(
-                mode=0o770, parents=True, exist_ok=True
-            )  # create parent directory
+            db_dir.mkdir(mode=0o770, parents=True, exist_ok=True)
+
+        # create the directory for image files if it doesn't exist
+        self.imgdir = self.filepath / "images"
+        if not self.imgdir.is_dir():
+            self.imgdir.mkdir(mode=0o770, exist_ok=True)
 
         # initalize the database if it doesn't exist
         need_init = not self.filepath.exists()
@@ -178,6 +193,10 @@ class MoveBoxTrackerDB:
     def db_filepath(self) -> Path:
         """get file path of SQLite database"""
         return self.filepath
+
+    def db_imgdir(self) -> Path:
+        """get file path of SQLite database"""
+        return self.imgdir
 
     def db_conn(self) -> sqlite3.Connection:
         """get sqlite connection for performing queries"""
@@ -272,14 +291,15 @@ class MoveDbRecord:
 
     def _interpolate_image(self, image_path: str, data: dict) -> None:
         """interpolate image file path into image record number"""
-        if "image_file" in data and "crc32" in data:
+        if "image_file" in data and "hash" in data:
             return  # do not interpolate image twice
         image_db = MoveDbImage(self.mbt_db)
-        (image_mimetype, image_encoding, image_crc32) = image_db.read_image_file(image_path)
-        data["image_file"] = image_path
+        (image_internal, image_mimetype, image_encoding, image_hash) \
+            = image_db.get_image_file(image_path)
+        data["image_file"] = image_internal
         data["mimetype"] = image_mimetype
         data["encoding"] = image_encoding
-        data["crc32"] = image_crc32
+        data["hash"] = image_hash
 
     def _interpolate_color(self, color_name: str) -> str:
         """validate a color name or RGB value"""
@@ -448,9 +468,9 @@ class MoveDbImage(MoveDbRecord):
             "prompt": "image file path",
             "interpolate": "image",
         },
-        "crc32": {
+        "hash": {
             "required": True,
-            "generate": "gen_crc32",
+            "generate": "gen_hash",
         },  # forward reference as str
         "mimetype": {},
         "encoding": {},
@@ -461,34 +481,40 @@ class MoveDbImage(MoveDbRecord):
         },  # forward reference as str
     }
 
-    def read_image_file(self, image_path: Path) -> (bytes, str):
-        """read image file, return record id of existing or new image record for it"""
-        image_bytes = None
-        with open(image_path, "rb") as image_fp:
-            try:
-                image_bytes = image_fp.read(-1)
-            except IOError:
-                image_bytes = None
-        if image_bytes is None:
-            raise RuntimeError(f"image file {image_path} could not be read")
-        image_crc32 = crc32(image_bytes)
-        # TODO - symlink or copy file to app directory
+    def _image_hash(self, image_path: Path) -> (str, bytes):
+        """calculate SHA256 hash of file and return binary value"""
+        hasher = hashlib.sha256()
+        blocksize = 65536
+        with image_path.open('rb') as img_file:
+            while buf := img_file.read(blocksize):
+                hasher.update(buf)
+        return (hasher.hexdigest(), hasher.digest())
+
+    def get_image_file(self, image_path: Path) -> (bytes, str):
+        """get image file info, and app-controlled path to existing or new image file"""
+        (image_hashstr, image_hash) = self._image_hash(image_path)
+        image_internal = self.mbt_db.db_imgdir() / (image_hashstr + "_" + image_path.name)
+        try:
+            image_internal.symlink_to(image_path)
+        except Exception as exc:
+            raise RuntimeError(f"failed to symlink {image_internal} -> {image_path}") from exc
         (image_mimetype, image_encoding) = mimetypes.guess_type(image_path, strict=False)
-        return (image_mimetype, image_encoding, image_crc32)
+        return (image_internal, image_mimetype, image_encoding, image_hash)
 
     @classmethod
     def get_or_create(cls, mbt_db: MoveBoxTrackerDB, value: str, data: dict) -> int:
         """return record number of image record matching path, or of newly-created record"""
 
-        # read image and compute CRC32
+        # read image and compute hash
         image_db = MoveDbImage(mbt_db)
         image_path = Path(value)
         if not image_path.exists():
             raise RuntimeError(f"image file {image_path} does not exist")
 
-        (image_mimetype, image_encoding, image_crc32) = image_db.read_image_file(image_path)
-        # if image is already in database, get record number based on CRC32
-        image_id = image_db.kv_search(key="crc32", value=image_crc32)
+        (image_internal, image_mimetype, image_encoding, image_hash) \
+            = image_db.get_image_file(image_path)
+        # if image is already in database, get record number based on hash
+        image_id = image_db.kv_search(key="hash", value=image_hash)
 
         # if image wasn't found, create a new record for it
         if image_id is None:
@@ -496,20 +522,21 @@ class MoveDbImage(MoveDbRecord):
             for key in cls.fields():
                 if key in data:
                     newrec_data[key] = data[key]
-            newrec_data["image_file"] = image_path
+            newrec_data["image_file"] = image_internal
             newrec_data["mimetype"] = image_mimetype
             newrec_data["encoding"] = image_encoding
-            newrec_data["crc32"] = image_crc32
+            newrec_data["hash"] = image_hash
             image_id = image_db.db_create(newrec_data)
         return image_id
 
-    def gen_crc32(self, data: dict) -> str:
-        """get crc32 from image blob"""
+    def gen_hash(self, data: dict) -> str:
+        """get hash from image file"""
         if "image_file" not in data:
             raise RuntimeError(
-                "image_file not found in query data - can't generate crc32 value"
+                "image_file not found in query data - can't generate hash value"
             )
-        data["crc32"] = crc32(data["image_file"])  # TODO - catch up with change from blob to path
+        (image_hashstr, _) = self._image_hash(data["image_file"])
+        data["image_file"] = image_hashstr
 
     def gen_mimetype(self, data: dict) -> str:
         """get mimetype from image data"""

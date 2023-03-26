@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS image (
   id INTEGER PRIMARY KEY NOT NULL,
   image_file text UNIQUE NOT NULL,
-  crc32 integer UNIQUE NOT NULL,
+  hash integer UNIQUE NOT NULL,
   mimetype text,
   encoding text,
   description text,
