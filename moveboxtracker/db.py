@@ -535,8 +535,8 @@ class MoveDbImage(MoveDbRecord):
             raise RuntimeError(
                 "image_file not found in query data - can't generate hash value"
             )
-        (image_hashstr, _) = self._image_hash(data["image_file"])
-        data["image_file"] = image_hashstr
+        (_, image_hash) = self._image_hash(data["image_file"])
+        data["hash"] = image_hash
 
     def gen_mimetype(self, data: dict) -> str:
         """get mimetype from image data"""
