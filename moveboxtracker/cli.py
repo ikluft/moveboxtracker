@@ -34,8 +34,7 @@ from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 import tempfile
 from shutil import move
-import qrcode
-import qrcode.image.svg
+from qrcodegen import QrCode
 from colorlookup import Color
 from weasyprint import HTML, CSS
 from . import __version__
@@ -150,21 +149,52 @@ def _gen_label_uri(user: str, box: str, room: str, color: str):
     return uri
 
 
+# to_svg_str() borrowed from qrcodegen demo
+def to_svg_str(qrcode: QrCode, border: int) -> str:
+    """Returns a string of SVG code for an image depicting the given QR Code, with the given number
+        of border modules. The string always uses Unix newlines (\n), regardless of the platform."""
+    if border < 0:
+        raise ValueError("Border must be non-negative")
+    parts = []
+    for y_pos in range(qrcode.get_size()):
+        for x_pos in range(qrcode.get_size()):
+            if qrcode.get_module(x_pos, y_pos):
+                parts.append(f"M{x_pos+border},{y_pos+border}h1v1h-1z")
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+            "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1"
+            viewBox="0 0 {qrcode.get_size()+border*2}
+            {qrcode.get_size()+border*2}" stroke="none">
+            <rect width="100%" height="100%" fill="#FFFFFF"/>
+            <path d="{" ".join(parts)}" fill="#000000"/>
+        </svg>
+        """
+
+
 def _gen_label_qrcode(
     tmpdirpath: Path, user: str, box: str, room: str, color: str
 ) -> str:
     """generate QR code in a file in the temporary directory for use in PDF generation"""
 
     # generate QR code in SVG for use in PDF
+    errcorlvl = QrCode.Ecc.LOW  # Error correction level
     qr_svg_file = f"label_{box}.svg"
-    qr_img = qrcode.make(
-        _gen_label_uri(user, box, room, color),
-        box_size=13,
-        border=5,
-        image_factory=qrcode.image.svg.SvgImage,
-        error_correction=qrcode.constants.ERROR_CORRECT_Q,
-    )
-    qr_img.save(f"{tmpdirpath}/{qr_svg_file}")
+    qr_svg_path = Path(tmpdirpath) / qr_svg_file
+    # qr_img = qrcode.make(
+    #    _gen_label_uri(user, box, room, color),
+    #    box_size=13,
+    #    border=5,
+    #    image_factory=qrcode.image.svg.SvgImage,
+    #    error_correction=qrcode.constants.ERROR_CORRECT_Q,
+    # )
+    qrcode = QrCode.encode_text(
+             _gen_label_uri(user, box, room, color),
+             errcorlvl)
+
+    # qrcode.save(f"{tmpdirpath}/{qr_svg_file}")
+    with open(qr_svg_path, "wt", encoding="utf-8") as qr_file:
+        qr_file.write(to_svg_str(qrcode, border=5))
     return qr_svg_file
 
 
