@@ -143,7 +143,7 @@ class MoveBoxTrackerDB:
             db_dir.mkdir(mode=0o770, parents=True, exist_ok=True)
 
         # create the directory for image files if it doesn't exist
-        self.imgdir = self.filepath / "images"
+        self.imgdir = self.filepath.parent / (str(self.filepath.stem) + "-images")
         if not self.imgdir.is_dir():
             self.imgdir.mkdir(mode=0o770, exist_ok=True)
 
