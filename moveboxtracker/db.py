@@ -39,7 +39,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "CREATE TABLE IF NOT EXISTS image ("
         "id INTEGER PRIMARY KEY NOT NULL,"
         "image_file text UNIQUE NOT NULL,"
-        "hash integer UNIQUE NOT NULL,"
+        "hash text UNIQUE NOT NULL,"
         "mimetype text,"
         "encoding text,"
         "description text,"
@@ -296,7 +296,7 @@ class MoveDbRecord:
         image_db = MoveDbImage(self.mbt_db)
         (image_internal, image_mimetype, image_encoding, image_hash) \
             = image_db.get_image_file(image_path)
-        data["image_file"] = image_internal
+        data["image_file"] = str(image_internal)
         data["mimetype"] = image_mimetype
         data["encoding"] = image_encoding
         data["hash"] = image_hash
@@ -472,13 +472,12 @@ class MoveDbImage(MoveDbRecord):
             "required": True,
             "generate": "gen_hash",
         },  # forward reference as str
-        "mimetype": {},
+        "mimetype": {
+            "generate": "gen_mimetype",
+        },
         "encoding": {},
         "description": {"prompt": "image description"},
-        "timestamp": {
-            "required": True,
-            "generate": "gen_mimetype",
-        },  # forward reference as str
+        "timestamp": {},
     }
 
     def _image_hash(self, image_path: Path) -> (str, bytes):
@@ -522,7 +521,7 @@ class MoveDbImage(MoveDbRecord):
             for key in cls.fields():
                 if key in data:
                     newrec_data[key] = data[key]
-            newrec_data["image_file"] = image_internal
+            newrec_data["image_file"] = str(image_internal)
             newrec_data["mimetype"] = image_mimetype
             newrec_data["encoding"] = image_encoding
             newrec_data["hash"] = image_hash
