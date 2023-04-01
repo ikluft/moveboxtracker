@@ -23,7 +23,7 @@ Features of the moving box labels:
 Tables in the SQLite database:
 * batch_move: each batch of boxes moved, time and destination
 * box_scan: code scan event for a box being entered into a move batch
-* image: storage of optional images (as database blobs) for moving_box and item records
+* image: storage of optional images for moving_box and item records
 * item: description of one of multiple items in a box, optional image
 * location: name of a location, such as origin, storage, destination, etc
 * move_project: overall project info including title, primary user and lost&found contact
@@ -118,8 +118,9 @@ Things that go inside a box are in the item table.
 
 #### image table
 
-Each record in the image table contains a photo stored as a blob (binary large object).
-It also has a CRC32 hash to recognize if the same image is already in the database.
+Each record in the image table describes a photo, stored in a directory named from the basename of the database
+with a "-images" suffix.
+It also has a hash to recognize if the same image is already in the database.
 A field for the MIME type tells what kind of image it is, and allows looking up what program can display it.
 Images in this table can be referenced by ID from the box or item tables.
 > moveboxtracker db image [-h] --file DB [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
