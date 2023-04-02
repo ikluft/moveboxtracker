@@ -138,3 +138,10 @@ Likely examples would be the origin, one or more storage or staging areas, and t
 The only field (other than the record ID number) is a text name.
 The name needs only to be meaningful to the people working on the move.
 > moveboxtracker db location [-h] --file DB [--name NAME] {create,read,update,delete} [id]
+
+#### move_project table
+
+The move_project contains only one record which is the core configuration of the project.
+It contains a title string, a reference to the primary user in the uri_user table,
+and a found-contact string to print on moving box labels.
+There is no "id" field because there is only one record.
