@@ -135,6 +135,7 @@ The move_project contains only one record which is the core configuration of the
 It contains a title string, a reference to the primary user in the uri_user table,
 and a found-contact string to print on moving box labels.
 There is no "id" field because there is only one record.
+> moveboxtracker db project [-h] --file DB [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] {create,read,update,delete} [id]
 
 #### moving_box table
 
@@ -146,3 +147,11 @@ For example, a framed picture or a chair also get a label with a "box" number.
 
 Things that go inside a box are in the item table.
 
+#### room table
+
+Each record in the room table represents a location at the origin and corresponding location at the destination.
+It's usually a room but doesn't necessarily have to be.
+After the integer primary key field, there are also name and color fields.
+The name field is a string which will should be short because it will be printed on each box label in large font.
+The color is a color code for the box labels to make them easier to recognize where to unload them to.
+> moveboxtracker db room [-h] --file DB [--name NAME] [--color COLOR] {create,read,update,delete} [id]
