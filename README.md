@@ -155,3 +155,13 @@ After the integer primary key field, there are also name and color fields.
 The name field is a string which will should be short because it will be printed on each box label in large font.
 The color is a color code for the box labels to make them easier to recognize where to unload them to.
 > moveboxtracker db room [-h] --file DB [--name NAME] [--color COLOR] {create,read,update,delete} [id]
+
+#### uri_user table
+
+Each record in the uri_user table represents a user who can enter data or scan boxes.
+This is intended for when merging a database from a mobile device which did scanning.
+Any batches of baxes moved by that device's user will be marked as scanned by them.
+The name needs to be a unique string.
+It is recommended to use the email address of the primary user of the mobile device,
+or another string which uniquely represents that person and that device.
+> moveboxtracker db user [-h] --file DB [--name NAME] {create,read,update,delete} [id]
