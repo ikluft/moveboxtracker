@@ -106,6 +106,16 @@ Each record in the batch table is a group of boxes moved together.
 They should be added to the batch as they are loaded into the vehicle.
 > moveboxtracker db batch [-h] --file DB [--timestamp TIMESTAMP] [--location LOCATION] {create,read,update,delete} [id]
 
+#### box table
+
+Each record in the box table is either a moving box or some other labeled item.
+For the database's purposes, everything that gets tracked and has a label is simplified to be called a box.
+Any labelled thing, whether or not it is actually a box, will be tracked in the database as a box.
+For example, a framed picture or a chair also get a label with a "box" number.
+> moveboxtracker db box [-h] --file DB [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] {create,read,update,delete} [id]
+
+Things that go inside a box are in the item table.
+
 #### image table
 
 Each record in the image table describes a photo, stored in a directory named from the basename of the database
@@ -129,23 +139,13 @@ The only field (other than the record ID number) is a text name.
 The name needs only to be meaningful to the people working on the move.
 > moveboxtracker db location [-h] --file DB [--name NAME] {create,read,update,delete} [id]
 
-#### move_project table
+#### project table
 
-The move_project contains only one record which is the core configuration of the project.
+The project contains only one record which is the core configuration of the project.
 It contains a title string, a reference to the primary user in the uri_user table,
 and a found-contact string to print on moving box labels.
 There is no "id" field because there is only one record.
 > moveboxtracker db project [-h] --file DB [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] {create,read,update,delete} [id]
-
-#### moving_box table
-
-Each record in the moving_box table is either a moving box or some other labeled item.
-For the database's purposes, everything that gets tracked and has a label is simplified to be called a box.
-Any labelled thing, whether or not it is actually a box, will be tracked in the database as a box.
-For example, a framed picture or a chair also get a label with a "box" number.
-> moveboxtracker db box [-h] --file DB [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] {create,read,update,delete} [id]
-
-Things that go inside a box are in the item table.
 
 #### room table
 
@@ -156,9 +156,9 @@ The name field is a string which will should be short because it will be printed
 The color is a color code for the box labels to make them easier to recognize where to unload them to.
 > moveboxtracker db room [-h] --file DB [--name NAME] [--color COLOR] {create,read,update,delete} [id]
 
-#### uri_user table
+#### user table
 
-Each record in the uri_user table represents a user who can enter data or scan boxes.
+Each record in the user table represents a user who can enter data or scan boxes.
 This is intended for when merging a database from a mobile device which did scanning.
 Any batches of baxes moved by that device's user will be marked as scanned by them.
 The name needs to be a unique string.
