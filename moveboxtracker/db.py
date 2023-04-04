@@ -749,6 +749,6 @@ class MoveDbItem(MoveDbRecord):
     field_data = {
         "id": {},
         "box": {"required": True, "references": MoveDbMovingBox},
-        "description": {"required": True},
+        "description": {"required": True, "prompt": "item description/info"},
         "image": {"references": MoveDbImage},
     }
