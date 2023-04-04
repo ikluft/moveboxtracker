@@ -172,6 +172,25 @@ def to_svg_str(qrcode: QrCode, border: int) -> str:
         """
 
 
+def _do_box(args: dict) -> ErrStr | None:
+    """create or modify a moving box record"""
+    table_class = CLI_TO_DB_CLASS["box"]
+    data = _args_to_data(args, table_class.fields())
+    if "db_file" not in args:
+        return "database file not specified"
+    filepath = args["db_file"]
+    db_obj = MoveBoxTrackerDB(filepath, prompt=cli_prompt)
+    if not isinstance(db_obj, MoveBoxTrackerDB):
+        return "failed to open database"
+
+    # if an id was provided then update existing record
+    if "id" in args:
+        err = _do_db_create(data, table_class, db_obj)
+    else:
+        err = _do_db_update(data, table_class, db_obj)
+    return err
+
+
 def _gen_label_qrcode(
     tmpdirpath: Path, user: str, box: str, room: str, color: str
 ) -> str:
@@ -527,6 +546,8 @@ def _gen_arg_subparsers(top_parser) -> None:
     """generate argparse first-level sub-parsers"""
     # define subparsers for high-level operations
     subparsers = top_parser.add_subparsers(help="sub-command help")
+
+    # init subparser
     parser_init = subparsers.add_parser(
         "init", help="initialize new moving box database"
     )
@@ -538,6 +559,22 @@ def _gen_arg_subparsers(top_parser) -> None:
     )
     parser_init.set_defaults(func=_do_init, omit_id=True)
 
+    # box subparser
+    parser_box = subparsers.add_parser(
+        "box", help="create or update a moving box record"
+    )
+    parser_box.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_box.add_argument("--id")
+    parser_box.add_argument("--location")
+    parser_box.add_argument("--info", "--desc", "--description")
+    parser_box.add_argument("--room")
+    parser_box.add_argument("--user")
+    parser_box.add_argument("--image")
+    parser_box.set_defaults(func=_do_box)
+
+    # label subparser
     parser_label = subparsers.add_parser(
         "label", help="print label(s) for specified box ids"
     )
@@ -555,6 +592,7 @@ def _gen_arg_subparsers(top_parser) -> None:
     parser_label.add_argument("box_id", nargs="+", metavar="ID")
     parser_label.set_defaults(func=_do_label)
 
+    # merge subparser
     parser_merge = subparsers.add_parser(
         "merge", help="merge in an external SQLite database file, from another device"
     )
@@ -566,6 +604,7 @@ def _gen_arg_subparsers(top_parser) -> None:
     )
     parser_merge.set_defaults(func=_do_merge)
 
+    # dump subparser
     parser_dump = subparsers.add_parser(
         "dump", help="dump database contents to standard output"
     )
