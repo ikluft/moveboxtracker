@@ -172,9 +172,12 @@ def to_svg_str(qrcode: QrCode, border: int) -> str:
         """
 
 
-def _do_box(args: dict) -> ErrStr | None:
-    """create or modify a moving box record"""
-    table_class = CLI_TO_DB_CLASS["box"]
+def _do_record_cli(args: dict) -> ErrStr | None:
+    """high-level CLI flow to create or modify a record"""
+    table = args["table"]
+    table_class = CLI_TO_DB_CLASS[table]
+    if "id" not in args:
+        args["omit_id"] = True
     data = _args_to_data(args, table_class.fields())
     if "db_file" not in args:
         return "database file not specified"
@@ -184,10 +187,10 @@ def _do_box(args: dict) -> ErrStr | None:
         return "failed to open database"
 
     # if an id was provided then update existing record
-    if "id" in args:
-        err = _do_db_create(data, table_class, db_obj)
-    else:
+    if "id" in data:
         err = _do_db_update(data, table_class, db_obj)
+    else:
+        err = _do_db_create(data, table_class, db_obj)
     return err
 
 
@@ -559,6 +562,18 @@ def _gen_arg_subparsers(top_parser) -> None:
     )
     parser_init.set_defaults(func=_do_init, omit_id=True)
 
+    # batch subparser
+    parser_batch = subparsers.add_parser(
+        "batch", help="create or update a batch record"
+    )
+    parser_batch.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_batch.add_argument("--id")
+    parser_batch.add_argument("--timestamp")
+    parser_batch.add_argument("--location")
+    parser_batch.set_defaults(table="batch", func=_do_record_cli)
+
     # box subparser
     parser_box = subparsers.add_parser(
         "box", help="create or update a moving box record"
@@ -572,7 +587,81 @@ def _gen_arg_subparsers(top_parser) -> None:
     parser_box.add_argument("--room")
     parser_box.add_argument("--user")
     parser_box.add_argument("--image")
-    parser_box.set_defaults(func=_do_box)
+    parser_box.set_defaults(table="box", func=_do_record_cli)
+
+    # image subparser
+    parser_image = subparsers.add_parser(
+        "image", help="create or update an image record"
+    )
+    parser_image.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_image.add_argument("--id")
+    parser_image.add_argument("--image_file", "--file")
+    parser_image.add_argument("--description", "--info", "--desc")
+    parser_image.add_argument("--timestamp")
+    parser_image.set_defaults(table="image", func=_do_record_cli)
+
+    # item subparser
+    parser_item = subparsers.add_parser(
+        "item", help="create or update an item record"
+    )
+    parser_item.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_item.add_argument("--id")
+    parser_item.add_argument("--box")
+    parser_item.add_argument("--description", "--info", "--desc")
+    parser_item.add_argument("--image")
+    parser_item.set_defaults(table="item", func=_do_record_cli)
+
+    # location subparser
+    parser_location = subparsers.add_parser(
+        "location", help="create or update a location record"
+    )
+    parser_location.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_location.add_argument("--id")
+    parser_location.add_argument("--name")
+    parser_location.set_defaults(table="location", func=_do_record_cli)
+
+    # room subparser
+    parser_room = subparsers.add_parser(
+        "room", help="create or update a room record"
+    )
+    parser_room.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_room.add_argument("--id")
+    parser_room.add_argument("--name")
+    parser_room.add_argument("--color")
+    parser_room.set_defaults(table="room", func=_do_record_cli)
+
+    # scan subparser
+    parser_scan = subparsers.add_parser(
+        "scan", help="create or update a scan record"
+    )
+    parser_scan.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_scan.add_argument("--id")
+    parser_scan.add_argument("--box")
+    parser_scan.add_argument("--batch")
+    parser_scan.add_argument("--user")
+    parser_scan.add_argument("--timestamp")
+    parser_scan.set_defaults(table="scan", func=_do_record_cli)
+
+    # user subparser
+    parser_user = subparsers.add_parser(
+        "user", help="create or update a user record"
+    )
+    parser_user.add_argument(
+        "db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_user.add_argument("--id")
+    parser_user.add_argument("--name")
+    parser_user.set_defaults(table="user", func=_do_record_cli)
 
     # label subparser
     parser_label = subparsers.add_parser(
