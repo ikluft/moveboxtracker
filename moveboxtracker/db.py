@@ -519,7 +519,7 @@ class MoveDbImage(MoveDbRecord):
         if image_id is None:
             newrec_data = {}
             for key in cls.fields():
-                if key in data:
+                if key in data and key != "id":
                     newrec_data[key] = data[key]
             newrec_data["image_file"] = str(image_internal)
             newrec_data["mimetype"] = image_mimetype
