@@ -457,6 +457,18 @@ class MoveDbRecord:
             return None
         return row[0]
 
+    def gen_primary_user(self, data: dict) -> str:
+        """get primary user string from move project"""
+        del data  # unused, provided to all "generate" handlers
+        table = MoveDbMoveProject.table_name()
+        cur = self.mbt_db.conn.cursor()
+        sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid = 1"
+        print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
+        cur.execute(sql_cmd)
+        row = cur.fetchone()
+        cur.close()
+        return row[0]
+
 
 class MoveDbImage(MoveDbRecord):
     """class to handle image records"""
@@ -493,7 +505,7 @@ class MoveDbImage(MoveDbRecord):
         """get image file info, and app-controlled path to existing or new image file"""
         (image_hashstr, image_hash) = self._image_hash(image_path)
         image_internal = (self.mbt_db.db_imgdir() / (image_hashstr + "_" + image_path.name)) \
-            .resolve(strict=True)
+            .resolve(strict=False)
         try:
             image_internal.symlink_to(image_path)
         except Exception as exc:
@@ -673,7 +685,7 @@ class MoveDbMovingBox(MoveDbRecord):
         "user": {
             "required": True,
             "references": MoveDbURIUser,
-            "generate": "gen_primary_user",
+            "generate": MoveDbRecord.gen_primary_user,
         },
         "image": {"references": MoveDbImage},
     }
@@ -714,18 +726,6 @@ class MoveDbMovingBox(MoveDbRecord):
         cur.close()
         return box_data
 
-    def gen_primary_user(self, data: dict) -> str:
-        """get primary user string from move project"""
-        del data  # unused, provided to all "generate" handlers
-        table = MoveDbMoveProject.table_name()
-        cur = self.mbt_db.conn.cursor()
-        sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid = 1"
-        print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
-        cur.execute(sql_cmd)
-        row = cur.fetchone()
-        cur.close()
-        return row[0]
-
 
 class MoveDbBoxScan(MoveDbRecord):
     """class to handle box_scan records"""
@@ -734,7 +734,11 @@ class MoveDbBoxScan(MoveDbRecord):
         "id": {},
         "box": {"required": True, "references": MoveDbMovingBox},
         "batch": {"required": True, "references": MoveDbBatchMove},
-        "user": {"required": True, "references": MoveDbURIUser},
+        "user": {
+            "required": True,
+            "references": MoveDbURIUser,
+            "generate": MoveDbRecord.gen_primary_user,
+        },
         "timestamp": {},
     }
 
