@@ -492,7 +492,8 @@ class MoveDbImage(MoveDbRecord):
     def get_image_file(self, image_path: Path) -> (bytes, str):
         """get image file info, and app-controlled path to existing or new image file"""
         (image_hashstr, image_hash) = self._image_hash(image_path)
-        image_internal = self.mbt_db.db_imgdir() / (image_hashstr + "_" + image_path.name)
+        image_internal = (self.mbt_db.db_imgdir() / (image_hashstr + "_" + image_path.name)) \
+            .resolve(strict=True)
         try:
             image_internal.symlink_to(image_path)
         except Exception as exc:
