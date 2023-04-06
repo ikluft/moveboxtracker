@@ -470,6 +470,182 @@ def _omit_id(in_list: list) -> list:
     return in_list
 
 
+def _gen_arg_subparsers_init(subparsers) -> None:
+    # init subparser
+    parser_init = subparsers.add_parser(
+        "init", help="initialize new moving box database"
+    )
+    parser_init.add_argument("--primary_user", "--user")
+    parser_init.add_argument("--title")
+    parser_init.add_argument("--found_contact", "--found", "--contact")
+    parser_init.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_init.set_defaults(func=_do_init, omit_id=True)
+
+
+def _gen_arg_subparsers_batch(subparsers) -> None:
+    # batch subparser
+    parser_batch = subparsers.add_parser(
+        "batch", help="create or update a batch record"
+    )
+    parser_batch.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_batch.add_argument("--id")
+    parser_batch.add_argument("--timestamp")
+    parser_batch.add_argument("--location")
+    parser_batch.set_defaults(table="batch", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_box(subparsers) -> None:
+    # box subparser
+    parser_box = subparsers.add_parser(
+        "box", help="create or update a moving box record"
+    )
+    parser_box.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_box.add_argument("--id")
+    parser_box.add_argument("--location")
+    parser_box.add_argument("--info", "--desc", "--description")
+    parser_box.add_argument("--room")
+    parser_box.add_argument("--user")
+    parser_box.add_argument("--image")
+    parser_box.set_defaults(table="box", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_image(subparsers) -> None:
+    # image subparser
+    parser_image = subparsers.add_parser(
+        "image", help="create or update an image record"
+    )
+    parser_image.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_image.add_argument("--id")
+    parser_image.add_argument("--image_file", "--file")
+    parser_image.add_argument("--description", "--info", "--desc")
+    parser_image.add_argument("--timestamp")
+    parser_image.set_defaults(table="image", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_item(subparsers) -> None:
+    # item subparser
+    parser_item = subparsers.add_parser(
+        "item", help="create or update an item record"
+    )
+    parser_item.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_item.add_argument("--id")
+    parser_item.add_argument("--box")
+    parser_item.add_argument("--description", "--info", "--desc")
+    parser_item.add_argument("--image")
+    parser_item.set_defaults(table="item", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_location(subparsers) -> None:
+    # location subparser
+    parser_location = subparsers.add_parser(
+        "location", help="create or update a location record"
+    )
+    parser_location.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_location.add_argument("--id")
+    parser_location.add_argument("--name")
+    parser_location.set_defaults(table="location", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_room(subparsers) -> None:
+    # room subparser
+    parser_room = subparsers.add_parser(
+        "room", help="create or update a room record"
+    )
+    parser_room.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_room.add_argument("--id")
+    parser_room.add_argument("--name")
+    parser_room.add_argument("--color")
+    parser_room.set_defaults(table="room", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_scan(subparsers) -> None:
+    # scan subparser
+    parser_scan = subparsers.add_parser(
+        "scan", help="create or update a scan record"
+    )
+    parser_scan.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_scan.add_argument("--id")
+    parser_scan.add_argument("--box")
+    parser_scan.add_argument("--batch")
+    parser_scan.add_argument("--user")
+    parser_scan.add_argument("--timestamp")
+    parser_scan.set_defaults(table="scan", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_user(subparsers) -> None:
+    # user subparser
+    parser_user = subparsers.add_parser(
+        "user", help="create or update a user record"
+    )
+    parser_user.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_user.add_argument("--id")
+    parser_user.add_argument("--name")
+    parser_user.set_defaults(table="user", func=_do_record_cli)
+
+
+def _gen_arg_subparsers_label(subparsers) -> None:
+    # label subparser
+    parser_label = subparsers.add_parser(
+        "label", help="print label(s) for specified box ids"
+    )
+    parser_label.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_label.add_argument(
+        "--outdir",
+        dest="out_dir",
+        action="store",
+        metavar="PDFFILE",
+        required=True,
+        help="directory to place output PDF file(s)",
+    )
+    parser_label.add_argument("box_id", nargs="+", metavar="ID")
+    parser_label.set_defaults(func=_do_label)
+
+
+def _gen_arg_subparsers_merge(subparsers) -> None:
+    # merge subparser
+    parser_merge = subparsers.add_parser(
+        "merge", help="merge in an external SQLite database file, from another device"
+    )
+    parser_merge.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_merge.add_argument(
+        "db_merge", nargs=1, metavar="DB2", help="database file to merge in"
+    )
+    parser_merge.set_defaults(func=_do_merge)
+
+
+def _gen_arg_subparsers_dump(subparsers) -> None:
+    # dump subparser
+    parser_dump = subparsers.add_parser(
+        "dump", help="dump database contents to standard output"
+    )
+    parser_dump.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+    parser_dump.set_defaults(func=_do_dump)
+
+
 def _gen_arg_subparsers_db(subparsers) -> None:
     # define subparsers for low-level database access
     parser_db = subparsers.add_parser(
@@ -560,156 +736,40 @@ def _gen_arg_subparsers(top_parser) -> None:
     subparsers = top_parser.add_subparsers(help="sub-command help")
 
     # init subparser
-    parser_init = subparsers.add_parser(
-        "init", help="initialize new moving box database"
-    )
-    parser_init.add_argument("--primary_user", "--user")
-    parser_init.add_argument("--title")
-    parser_init.add_argument("--found_contact", "--found", "--contact")
-    parser_init.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_init.set_defaults(func=_do_init, omit_id=True)
+    _gen_arg_subparsers_init(subparsers)
 
     # batch subparser
-    parser_batch = subparsers.add_parser(
-        "batch", help="create or update a batch record"
-    )
-    parser_batch.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_batch.add_argument("--id")
-    parser_batch.add_argument("--timestamp")
-    parser_batch.add_argument("--location")
-    parser_batch.set_defaults(table="batch", func=_do_record_cli)
+    _gen_arg_subparsers_batch(subparsers)
 
     # box subparser
-    parser_box = subparsers.add_parser(
-        "box", help="create or update a moving box record"
-    )
-    parser_box.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_box.add_argument("--id")
-    parser_box.add_argument("--location")
-    parser_box.add_argument("--info", "--desc", "--description")
-    parser_box.add_argument("--room")
-    parser_box.add_argument("--user")
-    parser_box.add_argument("--image")
-    parser_box.set_defaults(table="box", func=_do_record_cli)
+    _gen_arg_subparsers_box(subparsers)
 
     # image subparser
-    parser_image = subparsers.add_parser(
-        "image", help="create or update an image record"
-    )
-    parser_image.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_image.add_argument("--id")
-    parser_image.add_argument("--image_file", "--file")
-    parser_image.add_argument("--description", "--info", "--desc")
-    parser_image.add_argument("--timestamp")
-    parser_image.set_defaults(table="image", func=_do_record_cli)
+    _gen_arg_subparsers_image(subparsers)
 
     # item subparser
-    parser_item = subparsers.add_parser(
-        "item", help="create or update an item record"
-    )
-    parser_item.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_item.add_argument("--id")
-    parser_item.add_argument("--box")
-    parser_item.add_argument("--description", "--info", "--desc")
-    parser_item.add_argument("--image")
-    parser_item.set_defaults(table="item", func=_do_record_cli)
+    _gen_arg_subparsers_item(subparsers)
 
     # location subparser
-    parser_location = subparsers.add_parser(
-        "location", help="create or update a location record"
-    )
-    parser_location.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_location.add_argument("--id")
-    parser_location.add_argument("--name")
-    parser_location.set_defaults(table="location", func=_do_record_cli)
+    _gen_arg_subparsers_location(subparsers)
 
     # room subparser
-    parser_room = subparsers.add_parser(
-        "room", help="create or update a room record"
-    )
-    parser_room.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_room.add_argument("--id")
-    parser_room.add_argument("--name")
-    parser_room.add_argument("--color")
-    parser_room.set_defaults(table="room", func=_do_record_cli)
+    _gen_arg_subparsers_room(subparsers)
 
     # scan subparser
-    parser_scan = subparsers.add_parser(
-        "scan", help="create or update a scan record"
-    )
-    parser_scan.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_scan.add_argument("--id")
-    parser_scan.add_argument("--box")
-    parser_scan.add_argument("--batch")
-    parser_scan.add_argument("--user")
-    parser_scan.add_argument("--timestamp")
-    parser_scan.set_defaults(table="scan", func=_do_record_cli)
+    _gen_arg_subparsers_scan(subparsers)
 
     # user subparser
-    parser_user = subparsers.add_parser(
-        "user", help="create or update a user record"
-    )
-    parser_user.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_user.add_argument("--id")
-    parser_user.add_argument("--name")
-    parser_user.set_defaults(table="user", func=_do_record_cli)
+    _gen_arg_subparsers_user(subparsers)
 
     # label subparser
-    parser_label = subparsers.add_parser(
-        "label", help="print label(s) for specified box ids"
-    )
-    parser_label.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_label.add_argument(
-        "--outdir",
-        dest="out_dir",
-        action="store",
-        metavar="PDFFILE",
-        required=True,
-        help="directory to place output PDF file(s)",
-    )
-    parser_label.add_argument("box_id", nargs="+", metavar="ID")
-    parser_label.set_defaults(func=_do_label)
+    _gen_arg_subparsers_label(subparsers)
 
     # merge subparser
-    parser_merge = subparsers.add_parser(
-        "merge", help="merge in an external SQLite database file, from another device"
-    )
-    parser_merge.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_merge.add_argument(
-        "db_merge", nargs=1, metavar="DB2", help="database file to merge in"
-    )
-    parser_merge.set_defaults(func=_do_merge)
+    _gen_arg_subparsers_merge(subparsers)
 
     # dump subparser
-    parser_dump = subparsers.add_parser(
-        "dump", help="dump database contents to standard output"
-    )
-    parser_dump.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
-    parser_dump.set_defaults(func=_do_dump)
+    _gen_arg_subparsers_dump(subparsers)
 
     # define subparsers for low-level database access
     _gen_arg_subparsers_db(subparsers)
