@@ -450,17 +450,21 @@ def _do_db_delete(
     return None
 
 
+def _common_db_file_arg(arg_parser: argparse.ArgumentParser) -> None:
+    arg_parser.add_argument(
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+    )
+
+
 def _gen_arg_subparsers_init(subparsers) -> None:
     # init subparser
     parser_init = subparsers.add_parser(
         "init", help="initialize new moving box database"
     )
+    _common_db_file_arg(parser_init)
     parser_init.add_argument("--primary_user", "--user")
     parser_init.add_argument("--title")
     parser_init.add_argument("--found_contact", "--found", "--contact")
-    parser_init.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
     parser_init.set_defaults(func=_do_init, omit_id=True)
 
 
@@ -469,9 +473,7 @@ def _gen_arg_subparsers_batch(subparsers) -> None:
     parser_batch = subparsers.add_parser(
         "batch", help="create or update a batch record"
     )
-    parser_batch.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_batch)
     parser_batch.add_argument("--id")
     parser_batch.add_argument("--timestamp")
     parser_batch.add_argument("--location")
@@ -483,9 +485,7 @@ def _gen_arg_subparsers_box(subparsers) -> None:
     parser_box = subparsers.add_parser(
         "box", help="create or update a moving box record"
     )
-    parser_box.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_box)
     parser_box.add_argument("--id")
     parser_box.add_argument("--location")
     parser_box.add_argument("--info", "--desc", "--description")
@@ -500,9 +500,7 @@ def _gen_arg_subparsers_image(subparsers) -> None:
     parser_image = subparsers.add_parser(
         "image", help="create or update an image record"
     )
-    parser_image.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_image)
     parser_image.add_argument("--id")
     parser_image.add_argument("--image_file", "--file")
     parser_image.add_argument("--description", "--info", "--desc")
@@ -515,9 +513,7 @@ def _gen_arg_subparsers_item(subparsers) -> None:
     parser_item = subparsers.add_parser(
         "item", help="create or update an item record"
     )
-    parser_item.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_item)
     parser_item.add_argument("--id")
     parser_item.add_argument("--box")
     parser_item.add_argument("--description", "--info", "--desc")
@@ -530,9 +526,7 @@ def _gen_arg_subparsers_location(subparsers) -> None:
     parser_location = subparsers.add_parser(
         "location", help="create or update a location record"
     )
-    parser_location.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_location)
     parser_location.add_argument("--id")
     parser_location.add_argument("--name")
     parser_location.set_defaults(table="location", func=_do_record_cli)
@@ -543,9 +537,7 @@ def _gen_arg_subparsers_room(subparsers) -> None:
     parser_room = subparsers.add_parser(
         "room", help="create or update a room record"
     )
-    parser_room.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_room)
     parser_room.add_argument("--id")
     parser_room.add_argument("--name")
     parser_room.add_argument("--color")
@@ -557,9 +549,7 @@ def _gen_arg_subparsers_scan(subparsers) -> None:
     parser_scan = subparsers.add_parser(
         "scan", help="create or update a scan record"
     )
-    parser_scan.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_scan)
     parser_scan.add_argument("--id")
     parser_scan.add_argument("--box")
     parser_scan.add_argument("--batch")
@@ -573,9 +563,7 @@ def _gen_arg_subparsers_user(subparsers) -> None:
     parser_user = subparsers.add_parser(
         "user", help="create or update a user record"
     )
-    parser_user.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_user)
     parser_user.add_argument("--id")
     parser_user.add_argument("--name")
     parser_user.set_defaults(table="user", func=_do_record_cli)
@@ -586,9 +574,7 @@ def _gen_arg_subparsers_label(subparsers) -> None:
     parser_label = subparsers.add_parser(
         "label", help="print label(s) for specified box ids"
     )
-    parser_label.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_label)
     parser_label.add_argument(
         "--outdir",
         dest="out_dir",
@@ -606,9 +592,7 @@ def _gen_arg_subparsers_merge(subparsers) -> None:
     parser_merge = subparsers.add_parser(
         "merge", help="merge in an external SQLite database file, from another device"
     )
-    parser_merge.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_merge)
     parser_merge.add_argument(
         "db_merge", nargs=1, metavar="DB2", help="database file to merge in"
     )
@@ -620,9 +604,7 @@ def _gen_arg_subparsers_dump(subparsers) -> None:
     parser_dump = subparsers.add_parser(
         "dump", help="dump database contents to standard output"
     )
-    parser_dump.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_dump)
     parser_dump.set_defaults(func=_do_dump)
 
 
@@ -656,9 +638,7 @@ def _gen_arg_subparsers_db(subparsers) -> None:
     # parser_db_parent contains template for common parameters in all the db subparsers
     parser_db_parent = argparse.ArgumentParser(add_help=False)
     parser_db_parent.add_argument("op", choices=["create", "read", "update", "delete"])
-    parser_db_parent.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
-    )
+    _common_db_file_arg(parser_db_parent)
     subparsers_db = parser_db.add_subparsers(help="low-level db sub-command help")
     parser_db_parent.add_argument(
         "id", type=int, action="store", nargs="?", help="database record id"
