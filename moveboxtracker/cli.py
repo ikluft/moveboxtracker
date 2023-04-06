@@ -129,13 +129,22 @@ def cli_prompt(table: str, field_prompts: dict) -> dict:
     return result
 
 
+def _get_db_file(args: dict) -> Path | None:
+    """get default database file path from environment"""
+    if "db_file" in args and args["db_file"] is not None:
+        return Path(args["db_file"])
+    if "MBT_DB_FILE" in os.environ:
+        return Path(os.environ["MBT_DB_FILE"])
+    return None
+
+
 def _do_init(args: dict) -> ErrStr | None:
     """initialize new moving box database"""
-    if "db_file" not in args:
+    db_file = _get_db_file(args)
+    if db_file is None:
         return "database file not specified"
-    filepath = args["db_file"]
     data = _args_to_data(args, MoveDbMoveProject.fields())
-    db_obj = MoveBoxTrackerDB(filepath, data, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, data, prompt=cli_prompt)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "database initialization failed"
     return None
@@ -178,11 +187,11 @@ def _do_record_cli(args: dict) -> ErrStr | None:
     table_class = CLI_TO_DB_CLASS[table]
     if "id" not in args:
         args["omit_id"] = True
-    data = _args_to_data(args, table_class.fields())
-    if "db_file" not in args:
+    db_file = _get_db_file(args)
+    if db_file is None:
         return "database file not specified"
-    filepath = args["db_file"]
-    db_obj = MoveBoxTrackerDB(filepath, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
+    data = _args_to_data(args, table_class.fields())
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
@@ -317,10 +326,10 @@ def _gen_label(box_data: dict, outdir: str) -> None:
 
 def _do_label(args: dict) -> ErrStr | None:
     """print label(s) for specified box ids"""
-    if "db_file" not in args:
+    db_file = _get_db_file(args)
+    if db_file is None:
         return "database file not specified"
-    filepath = args["db_file"]
-    db_obj = MoveBoxTrackerDB(filepath, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
@@ -351,9 +360,12 @@ def _do_merge(args: dict) -> ErrStr | None:
 
 def _do_dump(args: dict) -> ErrStr | None:
     """dump database contents to standard output"""
-    db_file = args["db_file"]
+    db_file = _get_db_file(args)
+    if db_file is None:
+        return "database file not specified"
     db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
     db_obj.db_dump()
+    return None
 
 
 def _do_db(args: dict) -> ErrStr | None:
@@ -366,9 +378,11 @@ def _do_db(args: dict) -> ErrStr | None:
     if table_name not in CLI_TO_DB_CLASS:
         return f"_do_db: no db class found for {table_name}"
     table_class = CLI_TO_DB_CLASS[table_name]
-    db_file = args["db_file"]
-    data = _args_to_data(args, table_class.fields())
+    db_file = _get_db_file(args)
+    if db_file is None:
+        return "database file not specified"
     db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
+    data = _args_to_data(args, table_class.fields())
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
@@ -467,12 +481,7 @@ def _gen_arg_subparsers_db(subparsers) -> None:
     parser_db_parent = argparse.ArgumentParser(add_help=False)
     parser_db_parent.add_argument("op", choices=["create", "read", "update", "delete"])
     parser_db_parent.add_argument(
-        "--file",
-        dest="db_file",
-        action="store",
-        metavar="DB",
-        help="database file",
-        required=True,
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     subparsers_db = parser_db.add_subparsers(help="low-level db sub-command help")
     parser_db_parent.add_argument(
@@ -558,7 +567,7 @@ def _gen_arg_subparsers(top_parser) -> None:
     parser_init.add_argument("--title")
     parser_init.add_argument("--found_contact", "--found", "--contact")
     parser_init.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_init.set_defaults(func=_do_init, omit_id=True)
 
@@ -567,7 +576,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "batch", help="create or update a batch record"
     )
     parser_batch.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_batch.add_argument("--id")
     parser_batch.add_argument("--timestamp")
@@ -579,7 +588,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "box", help="create or update a moving box record"
     )
     parser_box.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_box.add_argument("--id")
     parser_box.add_argument("--location")
@@ -594,7 +603,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "image", help="create or update an image record"
     )
     parser_image.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_image.add_argument("--id")
     parser_image.add_argument("--image_file", "--file")
@@ -607,7 +616,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "item", help="create or update an item record"
     )
     parser_item.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_item.add_argument("--id")
     parser_item.add_argument("--box")
@@ -620,7 +629,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "location", help="create or update a location record"
     )
     parser_location.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_location.add_argument("--id")
     parser_location.add_argument("--name")
@@ -631,7 +640,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "room", help="create or update a room record"
     )
     parser_room.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_room.add_argument("--id")
     parser_room.add_argument("--name")
@@ -643,7 +652,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "scan", help="create or update a scan record"
     )
     parser_scan.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_scan.add_argument("--id")
     parser_scan.add_argument("--box")
@@ -657,7 +666,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "user", help="create or update a user record"
     )
     parser_user.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_user.add_argument("--id")
     parser_user.add_argument("--name")
@@ -668,7 +677,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "label", help="print label(s) for specified box ids"
     )
     parser_label.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_label.add_argument(
         "--outdir",
@@ -686,7 +695,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "merge", help="merge in an external SQLite database file, from another device"
     )
     parser_merge.add_argument(
-        "db_file", action="store", metavar="DB1", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_merge.add_argument(
         "db_merge", nargs=1, metavar="DB2", help="database file to merge in"
@@ -698,7 +707,7 @@ def _gen_arg_subparsers(top_parser) -> None:
         "dump", help="dump database contents to standard output"
     )
     parser_dump.add_argument(
-        "db_file", action="store", metavar="DB", help="database file"
+        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_dump.set_defaults(func=_do_dump)
 
