@@ -450,26 +450,6 @@ def _do_db_delete(
     return None
 
 
-def _gen_arg_subparser_table(
-    subparsers_db, parser_db_parent, table_name, help_str, fields
-) -> None:
-    subparser_table = subparsers_db.add_parser(
-        table_name, help=help_str, parents=[parser_db_parent]
-    )
-    subparser_table.set_defaults(table_name=table_name)
-    for field in fields:
-        subparser_table.add_argument(
-            f"--{field}", help=f"{field} field of {table_name} table"
-        )
-
-
-def _omit_id(in_list: list) -> list:
-    """omit the "id" field so that it is not included in fields for update"""
-    if in_list[0] == "id":
-        del in_list[0]
-    return in_list
-
-
 def _gen_arg_subparsers_init(subparsers) -> None:
     # init subparser
     parser_init = subparsers.add_parser(
@@ -644,6 +624,26 @@ def _gen_arg_subparsers_dump(subparsers) -> None:
         "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
     )
     parser_dump.set_defaults(func=_do_dump)
+
+
+def _gen_arg_subparser_table(
+    subparsers_db, parser_db_parent, table_name, help_str, fields
+) -> None:
+    subparser_table = subparsers_db.add_parser(
+        table_name, help=help_str, parents=[parser_db_parent]
+    )
+    subparser_table.set_defaults(table_name=table_name)
+    for field in fields:
+        subparser_table.add_argument(
+            f"--{field}", help=f"{field} field of {table_name} table"
+        )
+
+
+def _omit_id(in_list: list) -> list:
+    """omit the "id" field so that it is not included in fields for update"""
+    if in_list[0] == "id":
+        del in_list[0]
+    return in_list
 
 
 def _gen_arg_subparsers_db(subparsers) -> None:
