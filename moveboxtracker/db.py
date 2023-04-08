@@ -5,15 +5,19 @@ database (model layer) routines for moveboxtracker
 import sys
 import re
 from pathlib import Path
+from datetime import timezone
 import hashlib
 import mimetypes
 import sqlite3
+import dateutil.parser
+from tzlocal import get_localzone
 from prettytable import from_db_cursor, SINGLE_BORDER
 from xdg import BaseDirectory
 from colorlookup import Color
 
 # globals
 DATA_HOME = BaseDirectory.xdg_data_home  # XDG default data directory
+LOCAL_TZ = get_localzone()
 MBT_PKGNAME = "moveboxtracker"
 MBT_SCHEMA_PRAGMAS = ["PRAGMA foreign_keys=ON;"]
 MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
@@ -305,6 +309,14 @@ class MoveDbRecord:
         """validate a color name or RGB value"""
         return Color(color_name).name.lower()
 
+    def _interpolate_timestamp(self, timestamp: str) -> str:
+        """validate timestamp format and convert from CLI's local time to db's GMT"""
+        ts_dt = dateutil.parser.isoparse(timestamp)
+        if ts_dt.tzinfo is None or ts_dt.tzinfo.utcoffset(ts_dt) is None:
+            ts_dt.replace(tzinfo=LOCAL_TZ)
+        ts_dt_utc = ts_dt.astimezone(timezone.utc)
+        return ts_dt_utc.isoformat(sep=" ")
+
     def _interpolate_fields(self, data: dict) -> None:
         """interpolate foreign keys & image file paths into record numbers, validate color names"""
         field_data = vars(self.__class__)["field_data"]
@@ -327,6 +339,8 @@ class MoveDbRecord:
                         self._interpolate_image(data[key], data)
                     case "color":
                         data[key] = self._interpolate_color(data[key])
+                    case "timestamp":
+                        data[key] = self._interpolate_timestamp(data[key])
 
     def _generate_fields(self, data: dict) -> None:
         """prompt user for missing fields"""
@@ -489,7 +503,7 @@ class MoveDbImage(MoveDbRecord):
         },
         "encoding": {},
         "description": {"prompt": "image description"},
-        "timestamp": {},
+        "timestamp": {"interpolate": "timestamp"},
     }
 
     def _image_hash(self, image_path: Path) -> (str, bytes):
@@ -586,7 +600,7 @@ class MoveDbBatchMove(MoveDbRecord):
 
     field_data = {
         "id": {},
-        "timestamp": {},
+        "timestamp": {"interpolate": "timestamp"},
         "location": {
             "required": True,
             "references": MoveDbLocation,
@@ -739,7 +753,7 @@ class MoveDbBoxScan(MoveDbRecord):
             "references": MoveDbURIUser,
             "generate": MoveDbRecord.gen_primary_user,
         },
-        "timestamp": {},
+        "timestamp": {"interpolate": "timestamp"},
     }
 
 
