@@ -89,6 +89,13 @@ BOX_LABEL_STYLESHEET = (
     """
 )
 
+# database record CLI action handler functions
+CLI_ACTION = {
+    "batch": {
+        "commit": "_do_batch_commit",
+    }
+}
+
 
 def _get_version():
     """display version"""
@@ -181,6 +188,11 @@ def to_svg_str(qrcode: QrCode, border: int) -> str:
         """
 
 
+def _do_batch_commit(data: dict):
+    """change location of boxes in a batch to indicate the batch was moved as a group"""
+    return None
+
+
 def _do_record_cli(args: dict) -> ErrStr | None:
     """high-level CLI flow to create or modify a record"""
     table = args["table"]
@@ -194,6 +206,15 @@ def _do_record_cli(args: dict) -> ErrStr | None:
     data = _args_to_data(args, table_class.fields())
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
+
+    # check if an action handler function is needed
+    if table in CLI_ACTION:
+        for handler in CLI_ACTION[table].keys():
+            if handler in data:
+                handler_call = CLI_ACTION[table][handler]
+                if not callable(handler_call):
+                    return f"function not callable for {handler}"
+                return handler_call(data)
 
     # if an id was provided then update existing record
     if "id" in data:
