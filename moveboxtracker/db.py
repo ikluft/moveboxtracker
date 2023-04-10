@@ -15,6 +15,9 @@ from prettytable import from_db_cursor, SINGLE_BORDER
 from xdg import BaseDirectory
 from colorlookup import Color
 
+# type alias for error strings
+ErrStr = str
+
 # globals
 DATA_HOME = BaseDirectory.xdg_data_home  # XDG default data directory
 LOCAL_TZ = get_localzone()
@@ -402,7 +405,7 @@ class MoveDbRecord:
         cur = self.mbt_db.conn.cursor()
         if "id" not in data:
             raise RuntimeError(f"read requested on {table} is missing 'id' parameter")
-        sql_cmd = f"SELECT * FROM {table} WHERE id = :id"
+        sql_cmd = f"SELECT * FROM {table} WHERE id == :id"
         print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
@@ -431,7 +434,7 @@ class MoveDbRecord:
             if key != "id":
                 placeholder_list.append(f"{key} = :{key}")
         placeholder_str = (", ").join(placeholder_list)
-        sql_cmd = f"UPDATE {table} SET {placeholder_str} WHERE id = :id"
+        sql_cmd = f"UPDATE {table} SET {placeholder_str} WHERE id == :id"
         print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
@@ -448,7 +451,7 @@ class MoveDbRecord:
         cur = self.mbt_db.conn.cursor()
         if "id" not in data:
             raise RuntimeError(f"delete requested on {table} is missing 'id' parameter")
-        sql_cmd = f"DELETE FROM {table} WHERE id = :id"
+        sql_cmd = f"DELETE FROM {table} WHERE id == :id"
         print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
@@ -461,10 +464,10 @@ class MoveDbRecord:
         """search for a key/value pair in this table, return record id"""
         table = self.__class__.table_name()
         cur = self.mbt_db.conn.cursor()
-        data = {key: value}
-        sql_cmd = f"SELECT id FROM {table} WHERE {key} = :{key}"
-        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
-        cur.execute(sql_cmd, data)
+        sql_data = {key: value}
+        sql_cmd = f"SELECT id FROM {table} WHERE {key} == :{key}"
+        print(f"executing SQL [{sql_cmd}] with {sql_data}", file=sys.stderr)
+        cur.execute(sql_cmd, sql_data)
         row = cur.fetchone()
         cur.close()
         if row is None:
@@ -476,7 +479,7 @@ class MoveDbRecord:
         del data  # unused, provided to all "generate" handlers
         table = MoveDbMoveProject.table_name()
         cur = self.mbt_db.conn.cursor()
-        sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid = 1"
+        sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid == 1"
         print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
         cur.execute(sql_cmd)
         row = cur.fetchone()
@@ -608,6 +611,32 @@ class MoveDbBatchMove(MoveDbRecord):
         },
     }
 
+    @classmethod
+    def commit(cls, mbt_db: MoveBoxTrackerDB, data: dict) -> ErrStr | None:
+        """commit a batch: change location of boxes in a batch to the batch's location"""
+        if "id" not in data:
+            return "id not specified for batch commit"
+
+        # for boxes in batch, update each box to batch location
+        batch_id = data["id"]
+        batch_table = cls.table_name()
+        scan_table = MoveDbBoxScan.table_name()
+        box_table = MoveDbMovingBox.table_name()
+        cur = mbt_db.conn.cursor()
+        sql_data = {"batch": batch_id}
+        sql_cmd = f"UPDATE {box_table} AS box " \
+            + "SET location = batch.location " \
+            + f"FROM {batch_table} AS batch, {scan_table} AS scan " \
+            + "WHERE batch.id == :batch AND scan.batch == batch.id AND scan.box == box.id"
+        print(f"executing SQL [{sql_cmd}] with {sql_data}", file=sys.stderr)
+        cur.execute(sql_cmd, sql_data)
+        count = cur.rowcount
+        cur.close()
+
+        if count == 0:
+            return "no records modified"
+        return None
+
 
 class MoveDbRoom(MoveDbRecord):
     """class to handle room records"""
@@ -724,8 +753,8 @@ class MoveDbMovingBox(MoveDbRecord):
             "SELECT box.id AS box, room.name AS room, room.color AS color, "
             "location.name AS location, user.name AS user, project.found_contact AS found "
             "FROM moving_box AS box, room, location, uri_user AS user, move_project AS project "
-            "WHERE box.id = :id AND room.id = box.room AND location.id = box.location "
-            "AND user.id = box.user AND project.rowid = 1"
+            "WHERE box.id == :id AND room.id == box.room AND location.id == box.location "
+            "AND user.id == box.user AND project.rowid == 1"
         )
         print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
         cur.execute(sql_cmd, data)
