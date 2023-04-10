@@ -185,6 +185,7 @@ class MoveBoxTrackerDB:
             for schema_lines in MBT_SCHEMA.values():
                 for sql_line in schema_lines:
                     self.conn.execute(sql_line)
+        self.conn.commit()
 
         # populate initial records from provided data
         # create uri_user record first because move_project refers to it
