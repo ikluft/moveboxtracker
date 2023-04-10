@@ -631,10 +631,11 @@ class MoveDbBatchMove(MoveDbRecord):
         print(f"executing SQL [{sql_cmd}] with {sql_data}", file=sys.stderr)
         cur.execute(sql_cmd, sql_data)
         count = cur.rowcount
-        cur.close()
-
         if count == 0:
             return "no records modified"
+        mbt_db.conn.commit()
+        cur.close()
+
         return None
 
 
