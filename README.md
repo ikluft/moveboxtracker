@@ -56,6 +56,21 @@ The top-level subcommands are
 - dump:   dump database contents to standard output
 - db:     low-level database access subcommands
 
+In all the commands below, the database file name can be specified by either --db=filename
+on the command line or by setting the MBT_DB_FILE environment variable before running the program.
+Use of the environment variable allows setting it once instead of separately on every command.
+
+Example:
+> $ export MBT_DB_FILE=/path/to/movebox.db
+> $ movebox db box read 1
+> executing SQL [SELECT * FROM moving_box WHERE id == :id] with {'id': 1}
+> ┌────┬──────────┬───────────┬──────┬──────┬───────┐
+> │ id │ location │   info    │ room │ user │ image │
+> ├────┼──────────┼───────────┼──────┼──────┼───────┤
+> │ 1  │    1     │ MBR shoes │  2   │  1   │   1   │
+> └────┴──────────┴───────────┴──────┴──────┴───────┘
+> read 1 record(s)
+
 ### init subcommand
 
 Before a database can be used, the SQLite database file needs to be initialized.
@@ -104,7 +119,7 @@ Fields are required if the database defines them with a "NOT NULL" constraint.
 
 Each record in the batch table is a group of boxes moved together.
 They should be added to the batch as they are loaded into the vehicle.
-> moveboxtracker db batch [-h] --file DB [--timestamp TIMESTAMP] [--location LOCATION] {create,read,update,delete} [id]
+> moveboxtracker db batch [-h] [--db DB] [--timestamp TIMESTAMP] [--location LOCATION] {create,read,update,delete} [id]
 
 #### box table
 
@@ -112,7 +127,7 @@ Each record in the box table is either a moving box or some other labeled item.
 For the database's purposes, everything that gets tracked and has a label is simplified to be called a box.
 Any labelled thing, whether or not it is actually a box, will be tracked in the database as a box.
 For example, a framed picture or a chair also get a label with a "box" number.
-> moveboxtracker db box [-h] --file DB [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] {create,read,update,delete} [id]
+> moveboxtracker db box [-h] [--db DB] [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] {create,read,update,delete} [id]
 
 Things that go inside a box are in the item table.
 
@@ -123,13 +138,13 @@ with a "-images" suffix.
 It also has a hash to recognize if the same image is already in the database.
 A field for the MIME type tells what kind of image it is, and allows looking up what program can display it.
 Images in this table can be referenced by ID from the box or item tables.
-> moveboxtracker db image [-h] --file DB [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
+> moveboxtracker db image [-h] [--db DB] [--image_file IMAGE_FILE] [--hash HASH] [--mimetype MIMETYPE] [--encoding ENCODING] [--description DESCRIPTION] [--timestamp TIMESTAMP] {create,read,update,delete} [id]
 
 #### item table
 
 Each record in the item table is something that goes inside a box. Each item has a required reference to the box
 that contains it, required description text and an optional reference to an image of the item.
-> moveboxtracker db item [-h] --file DB [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
+> moveboxtracker db item [-h] [--db DB] [--box BOX] [--description DESCRIPTION] [--image IMAGE] {create,read,update,delete} [id]
 
 #### location table
 
@@ -137,7 +152,7 @@ Each record in the location table is a place where boxes can be at any stage of 
 Likely examples would be the origin, one or more storage or staging areas, and the destination.
 The only field (other than the record ID number) is a text name.
 The name needs only to be meaningful to the people working on the move.
-> moveboxtracker db location [-h] --file DB [--name NAME] {create,read,update,delete} [id]
+> moveboxtracker db location [-h] [--db DB] [--name NAME] {create,read,update,delete} [id]
 
 #### project table
 
@@ -145,7 +160,7 @@ The project contains only one record which is the core configuration of the proj
 It contains a title string, a reference to the primary user in the uri_user table,
 and a found-contact string to print on moving box labels.
 There is no "id" field because there is only one record.
-> moveboxtracker db project [-h] --file DB [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] {create,read,update,delete} [id]
+> moveboxtracker db project [-h] [--db DB] [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] {create,read,update,delete} [id]
 
 #### room table
 
@@ -154,7 +169,7 @@ It's usually a room but doesn't necessarily have to be.
 After the integer primary key field, there are also name and color fields.
 The name field is a string which will should be short because it will be printed on each box label in large font.
 The color is a color code for the box labels to make them easier to recognize where to unload them to.
-> moveboxtracker db room [-h] --file DB [--name NAME] [--color COLOR] {create,read,update,delete} [id]
+> moveboxtracker db room [-h] [--db DB] [--name NAME] [--color COLOR] {create,read,update,delete} [id]
 
 #### user table
 
@@ -164,4 +179,4 @@ Any batches of baxes moved by that device's user will be marked as scanned by th
 The name needs to be a unique string.
 It is recommended to use the email address of the primary user of the mobile device,
 or another string which uniquely represents that person and that device.
-> moveboxtracker db user [-h] --file DB [--name NAME] {create,read,update,delete} [id]
+> moveboxtracker db user [-h] [--db DB] [--name NAME] {create,read,update,delete} [id]
