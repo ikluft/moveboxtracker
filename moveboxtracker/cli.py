@@ -29,6 +29,7 @@ The "db" subcommand takes one of the following "CRUD" operation arguments:
 
 import os
 import re
+import lib_programname
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
@@ -71,6 +72,10 @@ CLI_TO_DB_CLASS = {
 # type alias for error strings
 ErrStr = str
 
+# package and program name
+PKG_NAME = "moveboxtracker"
+PROG_NAME = lib_programname.get_path_executed_script()
+
 # CSS stylesheet for box label PDF generator
 PAGE_SIZE = os.environ["MBT_PAGE_SIZE"] if "MBT_PAGE_SIZE" in os.environ else "Letter"
 BOX_LABEL_STYLESHEET = (
@@ -103,9 +108,9 @@ def _get_version():
         ver = __version__
     else:
         try:
-            ver = "moveboxtracker " + str(version("moveboxtracker"))
+            ver = f"{PKG_NAME} " + str(version(PKG_NAME))
         except PackageNotFoundError:
-            ver = "moveboxtracker version not available in development environment"
+            ver = f"{PKG_NAME} version not available in development environment"
     return ver
 
 
@@ -784,7 +789,7 @@ def _gen_arg_parser() -> argparse.ArgumentParser:
 
     # define global parser
     top_parser = argparse.ArgumentParser(
-        prog="moveboxtracker",
+        prog=PROG_NAME,
         description="moving box database manager and label generator",
     )
     top_parser.add_argument("--version", action="version", version=_get_version())
