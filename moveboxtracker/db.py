@@ -5,7 +5,7 @@ database (model layer) routines for moveboxtracker
 import sys
 import re
 from pathlib import Path
-from datetime import timezone
+from datetime import timezone, datetime
 import hashlib
 import mimetypes
 import sqlite3
@@ -315,7 +315,10 @@ class MoveDbRecord:
 
     def _interpolate_timestamp(self, timestamp: str) -> str:
         """validate timestamp format and convert from CLI's local time to db's GMT"""
-        ts_dt = dateutil.parser.isoparse(timestamp)
+        if timestamp == "now":
+            ts_dt = datetime.now(tz=timezone.utc).replace(microsecond=0)
+        else:
+            ts_dt = dateutil.parser.isoparse(timestamp)
         if ts_dt.tzinfo is None or ts_dt.tzinfo.utcoffset(ts_dt) is None:
             ts_dt.replace(tzinfo=LOCAL_TZ)
         ts_dt_utc = ts_dt.astimezone(timezone.utc)
