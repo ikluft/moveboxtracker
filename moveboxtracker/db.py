@@ -322,7 +322,7 @@ class MoveDbRecord:
         if ts_dt.tzinfo is None or ts_dt.tzinfo.utcoffset(ts_dt) is None:
             ts_dt.replace(tzinfo=LOCAL_TZ)
         ts_dt_utc = ts_dt.astimezone(timezone.utc)
-        return ts_dt_utc.isoformat(sep=" ")
+        return ts_dt_utc.strftime('%Y-%m-%d %H:%M:%SZ')
 
     def _interpolate_fields(self, data: dict) -> None:
         """interpolate foreign keys & image file paths into record numbers, validate color names"""
