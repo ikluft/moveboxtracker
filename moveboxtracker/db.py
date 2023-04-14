@@ -27,7 +27,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
     "batch_move": [
         "CREATE TABLE IF NOT EXISTS batch_move ("
         "id INTEGER PRIMARY KEY,"
-        "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+        "timestamp datetime NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%SZ', 'now')),"
         "location integer NOT NULL REFERENCES location (id)"
         ")",
         "CREATE INDEX IF NOT EXISTS batch_move_id_index ON batch_move(id)",
@@ -38,7 +38,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "box integer NOT NULL REFERENCES moving_box (id),"
         "batch integer NOT NULL REFERENCES batch_move (id),"
         "user integer NOT NULL REFERENCES uri_user (id),"
-        "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        "timestamp datetime NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%SZ', 'now'))"
         ")",
         "CREATE INDEX IF NOT EXISTS box_scan_id_index ON box_scan(id)",
     ],
@@ -50,7 +50,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "mimetype text,"
         "encoding text,"
         "description text,"
-        "timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        "timestamp datetime NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%SZ', 'now'))"
         ");",
         "CREATE INDEX IF NOT EXISTS image_id_index ON image(id);",
     ],

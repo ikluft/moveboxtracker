@@ -5,6 +5,6 @@ CREATE TABLE IF NOT EXISTS image (
   mimetype text,
   encoding text,
   description text,
-  timestamp datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+  timestamp datetime NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%SZ', 'now'))
 );
 CREATE INDEX IF NOT EXISTS image_id_index  ON image(id);
