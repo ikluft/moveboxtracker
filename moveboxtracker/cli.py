@@ -29,12 +29,12 @@ The "db" subcommand takes one of the following "CRUD" operation arguments:
 
 import os
 import re
-import lib_programname
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 import tempfile
 from shutil import move
+import lib_programname
 from qrcodegen import QrCode
 from colorlookup import Color
 from weasyprint import HTML, CSS
