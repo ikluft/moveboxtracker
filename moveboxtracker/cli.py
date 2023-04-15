@@ -240,13 +240,6 @@ def _gen_label_qrcode(
     errcorlvl = QrCode.Ecc.LOW  # Error correction level
     qr_svg_file = f"label_{box}.svg"
     qr_svg_path = Path(tmpdirpath) / qr_svg_file
-    # qr_img = qrcode.make(
-    #    _gen_label_uri(user, box, room, color),
-    #    box_size=13,
-    #    border=5,
-    #    image_factory=qrcode.image.svg.SvgImage,
-    #    error_correction=qrcode.constants.ERROR_CORRECT_Q,
-    # )
     qrcode = QrCode.encode_text(
              _gen_label_uri(user, box, room, color),
              errcorlvl)
@@ -363,7 +356,14 @@ def _do_label(args: dict) -> ErrStr | None:
 
     # print label data for each box
     rec_obj = MoveDbMovingBox(db_obj)
-    outdir = Path(args["out_dir"])
+    if "out_dir" in args and args["out_dir"] is not None:
+        # use --out_dir directory if provided via command line
+        outdir = Path(args["out_dir"])
+    else:
+        # default labels directory is xxx-labels/ next to xxx.db from db_file
+        outdir = db_file.parent / (str(db_file.stem) + "-labels")
+        if not outdir.is_dir():
+            outdir.mkdir(mode=0o770, exist_ok=True)
     box_id_list = args["box_id"]
     for box_id in box_id_list:
         # regular expression check for start-end range of box ids
@@ -609,8 +609,7 @@ def _gen_arg_subparsers_label(subparsers) -> None:
         dest="out_dir",
         action="store",
         metavar="PDFFILE",
-        required=True,
-        help="directory to place output PDF file(s)",
+        help="directory to place output PDF file(s), default: xxx-labels in same dir as xxx.db",
     )
     parser_label.add_argument("box_id", nargs="+", metavar="ID")
     parser_label.set_defaults(func=_do_label)
