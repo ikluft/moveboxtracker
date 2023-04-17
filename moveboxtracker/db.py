@@ -490,6 +490,22 @@ class MoveDbRecord:
         cur.close()
         return row[0]
 
+    @classmethod
+    def do_list(cls, mbt_db: MoveBoxTrackerDB, data: dict) -> ErrStr | None:
+        """list batch records"""
+        table = cls.table_name()
+        cur = mbt_db.conn.cursor()
+        sql_cmd = f"SELECT * FROM {table}"
+        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        cur.execute(sql_cmd, data)
+        if cur.rowcount == 0:
+            return "SQL read failed"
+        text_table = from_db_cursor(cur)
+        text_table.set_style(SINGLE_BORDER)
+        print(text_table)
+        mbt_db.conn.commit()
+        return None
+
 
 class MoveDbImage(MoveDbRecord):
     """class to handle image records"""

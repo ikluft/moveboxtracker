@@ -40,6 +40,7 @@ from colorlookup import Color
 from weasyprint import HTML, CSS
 from . import __version__
 from .db import (
+    MoveDbRecord,
     MoveBoxTrackerDB,
     MoveDbBatchMove,
     MoveDbMovingBox,
@@ -98,7 +99,32 @@ BOX_LABEL_STYLESHEET = (
 CLI_ACTION = {
     "batch": {
         "commit": "_do_batch_commit",
-    }
+        "list": "_do_list",
+    },
+    "box": {
+        "list": "_do_list",
+    },
+    "image": {
+        "list": "_do_list",
+    },
+    "item": {
+        "list": "_do_list",
+    },
+    "location": {
+        "list": "_do_list",
+    },
+    "project": {
+        "list": "_do_list",
+    },
+    "room": {
+        "list": "_do_list",
+    },
+    "scan": {
+        "list": "_do_list",
+    },
+    "user": {
+        "list": "_do_list",
+    },
 }
 
 
@@ -193,11 +219,22 @@ def to_svg_str(qrcode: QrCode, border: int) -> str:
         """
 
 
-def _do_batch_commit(data: dict, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
+def _do_batch_commit(table_class, data: dict, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
     """change location of boxes in a batch to indicate the batch was moved as a group"""
+    if table_class is not MoveDbBatchMove:
+        return "commit operation only valid on batch record"
     if "id" not in data:
         return "id not specified for batch commit"
     return MoveDbBatchMove.commit(db_obj, data)
+
+
+def _do_list(table_class, data: dict, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
+    """list batch records"""
+    if not issubclass(table_class, MoveDbRecord):
+        return "list operation on unsupported record class"
+    if table_class is MoveDbRecord:
+        return "list operation must be on a subclass of MoveDbRecord"
+    return table_class.do_list(db_obj, data)
 
 
 def _do_record_cli(args: dict) -> ErrStr | None:
@@ -221,7 +258,7 @@ def _do_record_cli(args: dict) -> ErrStr | None:
                 handler_call = CLI_ACTION[table][handler]
                 if not callable(handler_call) and str(handler_call) in globals():
                     handler_call = globals()[handler_call]
-                return handler_call(data, db_obj)
+                return handler_call(table_class, data, db_obj)
 
     # if an id was provided then update existing record
     if "id" in data:
@@ -506,6 +543,7 @@ def _gen_arg_subparsers_batch(subparsers) -> None:
     parser_batch.add_argument("--timestamp")  # db field
     parser_batch.add_argument("--location")  # db field
     parser_batch.add_argument("--commit", action='store_true')  # action handler
+    parser_batch.add_argument("--list", action='store_true')  # action handler
     parser_batch.set_defaults(table="batch", func=_do_record_cli)
 
 
@@ -521,6 +559,7 @@ def _gen_arg_subparsers_box(subparsers) -> None:
     parser_box.add_argument("--room")  # db field
     parser_box.add_argument("--user")  # db field
     parser_box.add_argument("--image")  # db field
+    parser_box.add_argument("--list", action='store_true')  # action handler
     parser_box.set_defaults(table="box", func=_do_record_cli)
 
 
@@ -534,6 +573,7 @@ def _gen_arg_subparsers_image(subparsers) -> None:
     parser_image.add_argument("--image_file", "--file")  # db field
     parser_image.add_argument("--description", "--info", "--desc")  # db field
     parser_image.add_argument("--timestamp")  # db field
+    parser_image.add_argument("--list", action='store_true')  # action handler
     parser_image.set_defaults(table="image", func=_do_record_cli)
 
 
@@ -547,6 +587,7 @@ def _gen_arg_subparsers_item(subparsers) -> None:
     parser_item.add_argument("--box")  # db field
     parser_item.add_argument("--description", "--info", "--desc")  # db field
     parser_item.add_argument("--image")  # db field
+    parser_item.add_argument("--list", action='store_true')  # action handler
     parser_item.set_defaults(table="item", func=_do_record_cli)
 
 
@@ -558,6 +599,7 @@ def _gen_arg_subparsers_location(subparsers) -> None:
     _common_db_file_arg(parser_location)
     parser_location.add_argument("--id")  # db field
     parser_location.add_argument("--name")  # db field
+    parser_location.add_argument("--list", action='store_true')  # action handler
     parser_location.set_defaults(table="location", func=_do_record_cli)
 
 
@@ -570,6 +612,7 @@ def _gen_arg_subparsers_room(subparsers) -> None:
     parser_room.add_argument("--id")  # db field
     parser_room.add_argument("--name")  # db field
     parser_room.add_argument("--color")  # db field
+    parser_room.add_argument("--list", action='store_true')  # action handler
     parser_room.set_defaults(table="room", func=_do_record_cli)
 
 
@@ -584,6 +627,7 @@ def _gen_arg_subparsers_scan(subparsers) -> None:
     parser_scan.add_argument("--batch")  # db field
     parser_scan.add_argument("--user")  # db field
     parser_scan.add_argument("--timestamp")  # db field
+    parser_scan.add_argument("--list", action='store_true')  # action handler
     parser_scan.set_defaults(table="scan", func=_do_record_cli)
 
 
@@ -595,6 +639,7 @@ def _gen_arg_subparsers_user(subparsers) -> None:
     _common_db_file_arg(parser_user)
     parser_user.add_argument("--id")  # db field
     parser_user.add_argument("--name")  # db field
+    parser_user.add_argument("--list", action='store_true')  # action handler
     parser_user.set_defaults(table="user", func=_do_record_cli)
 
 
