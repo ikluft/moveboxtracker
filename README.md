@@ -50,11 +50,19 @@ These are issued like "moveboxtracker <subcommand> <subcommand-args>"
 At any level the --help parameter can show a list of subcommands and options.
 
 The top-level subcommands are
-- init:   initialize new moving box database
-- label:  print label(s) for specified box ids
-- merge:  merge in an external SQLite database file, from another device
-- dump:   dump database contents to standard output
-- db:     low-level database access subcommands
+- init:     initialize new moving box database
+- batch:    create or update a batch record
+- box:      create or update a moving box record
+- image:    create or update an image record
+- item:     create or update an item record
+- location: create or update a location record
+- room:     create or update a room record
+- scan:     create or update a scan record
+- user:     create or update a user record
+- label:    print label(s) for specified box ids
+- merge:    merge in an external SQLite database file, from another device
+- dump:     dump database contents to standard output
+- db:       low-level database access subcommands
 
 In all the commands below, the database file name can be specified by either --db=filename
 on the command line or by setting the MBT_DB_FILE environment variable before running the program.
@@ -80,6 +88,30 @@ The usage is as follows:
     moveboxtracker init [-h] [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] DB
 
 When created the database contains table definitions but no records in any of the tables.
+
+### batch subcommand
+
+
+### box subcommand
+
+
+### image subcommand
+
+
+### item subcommand
+
+
+### location subcommand
+
+
+### room subcommand
+
+
+### scan subcommand
+
+
+### user subcommand
+
 
 ### label subcommand
 
