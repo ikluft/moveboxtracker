@@ -29,6 +29,7 @@ The "db" subcommand takes one of the following "CRUD" operation arguments:
 
 import os
 import re
+import sys
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
@@ -75,7 +76,9 @@ ErrStr = str
 
 # package and program name
 PKG_NAME = "moveboxtracker"
-PROG_NAME = lib_programname.get_path_executed_script()
+PROG_NAME = Path(sys.modules["__main__"].__file__).name \
+    if hasattr(sys.modules["__main__"], "__file__") \
+    else lib_programname.get_path_executed_script().name
 
 # CSS stylesheet for box label PDF generator
 PAGE_SIZE = os.environ["MBT_PAGE_SIZE"] if "MBT_PAGE_SIZE" in os.environ else "Letter"
