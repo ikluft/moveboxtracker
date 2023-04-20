@@ -91,6 +91,17 @@ When created the database contains table definitions but no records in any of th
 
 ### batch subcommand
 
+The "batch" subcommand creates or modifies a batch record.
+If a --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+
+    moveboxtracker batch [-h] [--db DB] [--id ID] [--timestamp TIMESTAMP] [--location LOCATION] [--commit] [--list]
+
+It will prompt for required parameters which were not provided on the command line.
+Location may be either a record id referring to the location table or the name of a location in that table,
+in which case its record id will be retrieved.
+
+See also the "db batch" subcommand for lower level but broader access to the database.
 
 ### box subcommand
 
