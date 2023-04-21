@@ -97,6 +97,19 @@ Otherwise it creates a new one.
 
     moveboxtracker batch [-h] [--db DB] [--id ID] [--timestamp TIMESTAMP] [--location LOCATION] [--commit] [--list]
 
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file
+
+data field options:
+- --id ID:              record id number
+- --timestamp TIMESTAMP: batch timestamp
+- --location LOCATION:  batch location - where the boxes in this batch are moving to
+
+action options:
+- --commit:             update locations of boxes in this batch to the new location
+- --list:               display a list of the batch records
+
 It will prompt for required parameters which were not provided on the command line.
 Location may be either a record id referring to the location table or the name of a location in that table,
 in which case its record id will be retrieved.
