@@ -416,6 +416,8 @@ class MoveDbRecord:
             raise RuntimeError("SQL read failed")
         text_table = from_db_cursor(cur)
         text_table.set_style(SINGLE_BORDER)
+        text_table.left_padding_width = 0
+        text_table.right_padding_width = 0
         print(text_table)
         self.mbt_db.conn.commit()
         return 1  # if no exceptions raised by now, assume 1 record
@@ -502,6 +504,8 @@ class MoveDbRecord:
             return "SQL read failed"
         text_table = from_db_cursor(cur)
         text_table.set_style(SINGLE_BORDER)
+        text_table.left_padding_width = 0
+        text_table.right_padding_width = 0
         print(text_table)
         mbt_db.conn.commit()
         return None
