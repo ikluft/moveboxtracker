@@ -349,7 +349,7 @@ def _gen_label_html(box_data: dict, tmpdirpath: Path, qr_svg_file: Path) -> str:
     return html_file_path
 
 
-def _gen_label(box_data: dict, outdir: str) -> None:
+def _gen_label(box_data: dict, outdir: Path) -> None:
     """generate one moving box label from a dict of the box's data"""
 
     # collect parameters
@@ -359,7 +359,14 @@ def _gen_label(box_data: dict, outdir: str) -> None:
     room = str(box_data["room"]).upper()
 
     # verify output directory exists
-    outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
+    if not outdir.exists():
+        outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
+
+    # skip this label if destination PDF exists
+    label_pdf_basename = f"label_{box}.pdf"
+    if Path(outdir / label_pdf_basename).is_file():
+        print(f"skipping {box}: label PDF exists at {label_pdf_basename}")
+        return
 
     # allocate temporary directory
     tmpdirpath = tempfile.mkdtemp(prefix="moving_label_")
@@ -374,7 +381,7 @@ def _gen_label(box_data: dict, outdir: str) -> None:
     css = CSS(string=BOX_LABEL_STYLESHEET)
 
     # generate PDF
-    label_pdf_file = Path(f"{tmpdirpath}/label_{box}.pdf")
+    label_pdf_file = Path(tmpdirpath + "/" + label_pdf_basename)
     doc = HTML(filename=html_file_path)
     doc.write_pdf(
         target=label_pdf_file,
