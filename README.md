@@ -87,6 +87,16 @@ The usage is as follows:
 
     moveboxtracker init [-h] [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] DB
 
+top-level options:
+- -h, --help:           show help message and exit
+
+data field options:
+- --id ID:              record id number
+- --primary_user PRIMARY_USER: primary user id to attach to scans
+- --title TITLE:        project name
+- --found_contact FOUND_CONTACT: lost+found contact information to display on labels
+- DB:                   database file path to create and initilize
+
 When created the database contains table definitions but no records in any of the tables.
 
 ### batch subcommand
