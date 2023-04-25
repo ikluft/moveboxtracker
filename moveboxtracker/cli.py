@@ -663,7 +663,7 @@ def _gen_arg_subparsers_label(subparsers) -> None:
         "--outdir",
         dest="out_dir",
         action="store",
-        metavar="PDFFILE",
+        metavar="LABELDIR",
         help="directory to place output PDF file(s), default: xxx-labels in same dir as xxx.db",
     )
     parser_label.add_argument("box_id", nargs="+", metavar="ID")
