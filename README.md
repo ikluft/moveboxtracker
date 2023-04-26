@@ -128,6 +128,26 @@ See also the "db batch" subcommand for lower level but broader access to the dat
 
 ### box subcommand
 
+The "box" subcommand creates or modifies a moving box record.
+If a --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+
+    movebox box [-h] [--db DB] [--id ID] [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] [--list]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file
+
+data field options:
+- --id ID:              record id number
+- --location LOCATION:  box location, changes when a batch this box belongs to gets moved
+- --info INFO:          description of the box or unit
+- --room ROOM:          id referring to room table, for printing on box label
+- --user USER:          id referring to user table, originating user for printing on box label
+- --image IMAGE:        id referring to image table (optional)
+
+action options:
+- --list:               display a list of the batch records
 
 ### image subcommand
 
