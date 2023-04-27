@@ -124,6 +124,7 @@ CLI_ACTION = {
     },
     "scan": {
         "list": "_do_list",
+        "boxes": "_do_scan_boxes",
     },
     "user": {
         "list": "_do_list",
@@ -222,21 +223,51 @@ def to_svg_str(qrcode: QrCode, border: int) -> str:
         """
 
 
-def _do_batch_commit(table_class, data: dict, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
+def _do_batch_commit(table_class, db_obj: MoveBoxTrackerDB, **kwargs) \
+        -> ErrStr | None:
     """change location of boxes in a batch to indicate the batch was moved as a group"""
     if table_class is not MoveDbBatchMove:
-        return "commit operation only valid on batch record"
+        return f"commit operation only valid on batch record (got f{table_class}"
+    if "data" not in kwargs:
+        return "missing data parameter"
+    data = kwargs["data"]
     if "id" not in data:
         return "id not specified for batch commit"
     return MoveDbBatchMove.commit(db_obj, data)
 
 
-def _do_list(table_class, data: dict, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
+def _do_scan_boxes(table_class, db_obj: MoveBoxTrackerDB, **kwargs) -> ErrStr | None:
+    """create scan record for a given batch with multiple boxes from command line"""
+    if table_class is not MoveDbBoxScan:
+        return f"scan operation only valid on box record (got f{table_class}"
+    if "data" not in kwargs:
+        return "missing data parameter"
+    data = kwargs["data"]
+    if "args" not in kwargs:
+        return "missing args parameter"
+    args = kwargs["args"]
+
+    # create a scan for each box id
+    errors = []
+    for box_id in args["boxes"]:
+        data["box"] = box_id
+        err = _do_db_create(data, table_class, db_obj)
+        if err is not None:
+            errors.append(err)
+    if len(errors) > 0:
+        return "\n".join(errors)
+    return None
+
+
+def _do_list(table_class, db_obj: MoveBoxTrackerDB, **kwargs) -> ErrStr | None:
     """list batch records"""
     if not issubclass(table_class, MoveDbRecord):
         return "list operation on unsupported record class"
     if table_class is MoveDbRecord:
         return "list operation must be on a subclass of MoveDbRecord"
+    if "data" not in kwargs:
+        return "missing data parameter"
+    data = kwargs["data"]
     return table_class.do_list(db_obj, data)
 
 
@@ -261,7 +292,7 @@ def _do_record_cli(args: dict) -> ErrStr | None:
                 handler_call = CLI_ACTION[table][handler]
                 if not callable(handler_call) and str(handler_call) in globals():
                     handler_call = globals()[handler_call]
-                return handler_call(table_class, data, db_obj)
+                return handler_call(table_class, db_obj, data=data, args=args)
 
     # if an id was provided then update existing record
     if "id" in data:
@@ -637,7 +668,9 @@ def _gen_arg_subparsers_scan(subparsers) -> None:
     parser_scan.add_argument("--batch")  # db field
     parser_scan.add_argument("--user")  # db field
     parser_scan.add_argument("--timestamp")  # db field
-    parser_scan.add_argument("--list", action='store_true')  # action handler
+    handler_group = parser_scan.add_mutually_exclusive_group()
+    handler_group.add_argument("--list", action='store_true')  # action handler
+    handler_group.add_argument("--boxes", nargs="+", metavar="BOXID", type=int)  # action handler
     parser_scan.set_defaults(table="scan", func=_do_record_cli)
 
 
