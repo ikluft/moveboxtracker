@@ -102,21 +102,21 @@ When created the database contains table definitions but no records in any of th
 ### batch subcommand
 
 The "batch" subcommand creates or modifies a batch record.
-If a --id parameter is present, it modifies that record.
+If an --id parameter is present, it modifies that record.
 Otherwise it creates a new one.
 
     moveboxtracker batch [-h] [--db DB] [--id ID] [--timestamp TIMESTAMP] [--location LOCATION] [--commit] [--list]
 
 top-level options:
 - -h, --help:           show help message and exit
-- --db DB, --db_file:   DB database file
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
 - --id ID:              record id number
 - --timestamp TIMESTAMP: batch timestamp
 - --location LOCATION:  batch location - where the boxes in this batch are moving to
 
-action options:
+action options: (actions to take instead of creating or updating a record)
 - --commit:             update locations of boxes in this batch to the new location
 - --list:               display a list of the batch records
 
@@ -129,14 +129,14 @@ See also the "db batch" subcommand for lower level but broader access to the dat
 ### box subcommand
 
 The "box" subcommand creates or modifies a moving box record.
-If a --id parameter is present, it modifies that record.
+If an --id parameter is present, it modifies that record.
 Otherwise it creates a new one.
 
-    movebox box [-h] [--db DB] [--id ID] [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] [--list]
+    moveboxtracker box [-h] [--db DB] [--id ID] [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] [--list]
 
 top-level options:
 - -h, --help:           show help message and exit
-- --db DB, --db_file:   DB database file
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
 - --id ID:              record id number
@@ -146,11 +146,33 @@ data field options:
 - --user USER:          id referring to user table, originating user for printing on box label
 - --image IMAGE:        id referring to image table (optional)
 
-action options:
-- --list:               display a list of the batch records
+action options: (actions to take instead of creating or updating a record)
+- --list:               display a list of the box records
+
+See also the "db box" subcommand for lower level but broader access to the database.
 
 ### image subcommand
 
+The "image" subcommand creates or modifies an image record.
+If an --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+
+    movebox image [-h] [--db DB] [--id ID] [--image_file IMAGE_FILE] [--description DESCRIPTION] [--timestamp TIMESTAMP] [--list]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+data field options:
+- --id ID:              record id number
+- --image_file IMAGE_FILE: relative or absolute path to the image file
+- --description DESCRIPTION: description of the image
+- --timestamp TIMESTAMP: time of the image, defaults to the current time at record creation
+
+action options: (actions to take instead of creating or updating a record)
+- --list:               display a list of the image records
+
+See also the "db image" subcommand for lower level but broader access to the database.
 
 ### item subcommand
 
@@ -175,7 +197,7 @@ Printing a label from the database requires providing the database file, a box I
 
 top-level options:
 - -h, --help:           show help message and exit
-- --db DB, --db_file:   DB database file
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 label generation options:
 
