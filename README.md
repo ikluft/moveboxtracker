@@ -83,6 +83,7 @@ Example:
 ### init subcommand
 
 Before a database can be used, the SQLite database file needs to be initialized.
+Any missing data fields will be filled via command-line prompt.
 The usage is as follows:
 
     moveboxtracker init [-h] [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] DB
@@ -104,6 +105,7 @@ When created the database contains table definitions but no records in any of th
 The "batch" subcommand creates or modifies a batch record.
 If an --id parameter is present, it modifies that record.
 Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
 
     moveboxtracker batch [-h] [--db DB] [--id ID] [--timestamp TIMESTAMP] [--location LOCATION] [--commit] [--list]
 
@@ -131,6 +133,7 @@ See also the "db batch" subcommand for lower level but broader access to the dat
 The "box" subcommand creates or modifies a moving box record.
 If an --id parameter is present, it modifies that record.
 Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
 
     moveboxtracker box [-h] [--db DB] [--id ID] [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] [--list]
 
@@ -156,6 +159,7 @@ See also the "db box" subcommand for lower level but broader access to the datab
 The "image" subcommand creates or modifies an image record.
 If an --id parameter is present, it modifies that record.
 Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
 
     movebox image [-h] [--db DB] [--id ID] [--image_file IMAGE_FILE] [--description DESCRIPTION] [--timestamp TIMESTAMP] [--list]
 
