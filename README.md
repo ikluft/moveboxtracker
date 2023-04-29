@@ -71,7 +71,7 @@ Use of the environment variable allows setting it once instead of separately on 
 Example:
 
     $ export MBT_DB_FILE=/path/to/movebox.db
-    $ movebox db box read 1
+    $ moveboxtracker db box read 1
     executing SQL [SELECT * FROM moving_box WHERE id == :id] with {'id': 1}
     ┌────┬──────────┬───────────┬──────┬──────┬───────┐
     │ id │ location │   info    │ room │ user │ image │
@@ -161,7 +161,7 @@ If an --id parameter is present, it modifies that record.
 Otherwise it creates a new one.
 When creating a new record, missing data fields will be filled via command-line prompt.
 
-    movebox image [-h] [--db DB] [--id ID] [--image_file IMAGE_FILE] [--description DESCRIPTION] [--timestamp TIMESTAMP] [--list]
+    moveboxtracker image [-h] [--db DB] [--id ID] [--image_file IMAGE_FILE] [--description DESCRIPTION] [--timestamp TIMESTAMP] [--list]
 
 top-level options:
 - -h, --help:           show help message and exit
