@@ -180,6 +180,27 @@ See also the "db image" subcommand for lower level but broader access to the dat
 
 ### item subcommand
 
+The "item" subcommand creates or modifies an item record.
+If an --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
+
+    moveboxtracker item [-h] [--db DB] [--id ID] [--box BOX] [--description DESCRIPTION] [--image IMAGE] [--list]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+data field options:
+- --id ID:                   record id number
+- --box BOX:                 id number of the box which contains the item
+- --description DESCRIPTION: description of the image
+- --image IMAGE:             optional image of the item, as a path to a file or index into the image table
+
+action options: (actions to take instead of creating or updating a record)
+- --list:               display a list of the item records
+
+See also the "db item" subcommand for lower level but broader access to the database.
 
 ### location subcommand
 
