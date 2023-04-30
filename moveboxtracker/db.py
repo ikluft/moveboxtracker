@@ -471,7 +471,7 @@ class MoveDbRecord:
         table = self.__class__.table_name()
         cur = self.mbt_db.conn.cursor()
         sql_data = {key: value}
-        sql_cmd = f"SELECT id FROM {table} WHERE {key} == :{key}"
+        sql_cmd = f"SELECT id FROM {table} WHERE {key} LIKE :{key}"
         print(f"executing SQL [{sql_cmd}] with {sql_data}", file=sys.stderr)
         cur.execute(sql_cmd, sql_data)
         row = cur.fetchone()
