@@ -204,6 +204,25 @@ See also the "db item" subcommand for lower level but broader access to the data
 
 ### location subcommand
 
+The "location" subcommand creates or modifies a location record.
+If an --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
+
+    moveboxtracker location [-h] [--db DB] [--id ID] [--name NAME] [--list]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+data field options:
+- --id ID:              record id number
+- --name NAME:          room name string
+
+action options: (actions to take instead of creating or updating a record)
+- --list:               display a list of the location records
+
+See also the "db location" subcommand for lower level but broader access to the database.
 
 ### room subcommand
 
