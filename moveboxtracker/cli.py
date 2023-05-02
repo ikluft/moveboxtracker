@@ -158,6 +158,23 @@ def _get_db_file(args: dict) -> Path | None:
     return None
 
 
+def _expand_id_list(id_list: list) -> list:
+    """expand list of strings with record ids and ranges of ids into a list of integer ids"""
+    ids = []
+    for id_num in id_list:
+        # regular expression check for start-end range of box ids
+        match = re.fullmatch(r"^(\d+)-(\d+)$", str(id_num))
+        if match:
+            # process start-end range of box ids
+            start, end = match.groups()
+            for box_num in range(int(start), int(end)):
+                ids.append(box_num)
+        else:
+            # process a single box id
+            ids.append(int(id_num))
+    return ids
+
+
 def _do_init(args: dict) -> ErrStr | None:
     """initialize new moving box database"""
     db_file = _get_db_file(args)
@@ -196,7 +213,7 @@ def _do_scan_boxes(table_class, db_obj: MoveBoxTrackerDB, **kwargs) -> ErrStr | 
 
     # create a scan for each box id
     errors = []
-    for box_id in args["boxes"]:
+    for box_id in _expand_id_list(args["boxes"]):
         data["box"] = box_id
         err = _do_db_create(data, table_class, db_obj)
         if err is not None:
@@ -268,20 +285,10 @@ def _do_label(args: dict) -> ErrStr | None:
         outdir = db_file.parent / (str(db_file.stem) + "-labels")
         if not outdir.is_dir():
             outdir.mkdir(mode=0o770, exist_ok=True)
-    box_id_list = args["box_id"]
-    for box_id in box_id_list:
-        # regular expression check for start-end range of box ids
-        match = re.fullmatch(r"^(\d+)-(\d+)$", str(box_id))
-        if match:
-            # process start-end range of box ids
-            start, end = match.groups()
-            for box_num in range(int(start), int(end)):
-                box_data = rec_obj.box_label_data(box_num)
-                MoveBoxLabel.gen_label(box_data, outdir)
-        else:
-            # process a single box id
-            box_data = rec_obj.box_label_data(box_id)
-            MoveBoxLabel.gen_label(box_data, outdir)
+    for box_id in _expand_id_list(args["box_id"]):
+        # process a single box id from range-expanded list
+        box_data = rec_obj.box_label_data(box_id)
+        MoveBoxLabel.gen_label(box_data, outdir)
     return None
 
 
