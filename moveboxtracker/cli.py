@@ -30,6 +30,7 @@ The "db" subcommand takes one of the following "CRUD" operation arguments:
 import os
 import re
 import sys
+import warnings
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
@@ -169,9 +170,18 @@ def _expand_id_list(id_list: list) -> list:
             start, end = match.groups()
             for box_num in range(int(start), int(end)):
                 ids.append(box_num)
-        else:
+            continue
+
+        # regular expression check for simple integer
+        match = re.fullmatch(r"^(\d+)$", str(id_num))
+        if match:
             # process a single box id
-            ids.append(int(id_num))
+            id_match = match.groups()
+            ids.append(int(id_match))
+            continue
+
+        # unrecognized string
+        warnings.warn(f"skipped unrecognized integer/range {id_num}")
     return ids
 
 
@@ -503,7 +513,7 @@ def _gen_arg_subparsers_scan(subparsers) -> None:
     parser_scan.add_argument("--timestamp")  # db field
     handler_group = parser_scan.add_mutually_exclusive_group()
     handler_group.add_argument("--list", action='store_true')  # action handler
-    handler_group.add_argument("--boxes", nargs="+", metavar="BOXID", type=int)  # action handler
+    handler_group.add_argument("--boxes", nargs="+", metavar="BOXID")  # action handler
     parser_scan.set_defaults(table="scan", func=_do_record_cli)
 
 
