@@ -33,12 +33,7 @@ import sys
 import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
-import tempfile
-from shutil import move
 import lib_programname
-from qrcodegen import QrCode
-from colorlookup import Color
-from weasyprint import HTML, CSS
 from . import __version__
 from .db import (
     MoveDbRecord,
@@ -53,6 +48,7 @@ from .db import (
     MoveDbBoxScan,
     MoveDbURIUser,
 )
+from .label import MoveBoxLabel
 
 # manage table names used by CLI and by database classes
 # Shorter names are preferred for a CLI. Descriptive names are preferred for an SQL schema.
@@ -79,24 +75,6 @@ PKG_NAME = "moveboxtracker"
 PROG_NAME = Path(sys.modules["__main__"].__file__).name \
     if hasattr(sys.modules["__main__"], "__file__") \
     else lib_programname.get_path_executed_script().name
-
-# CSS stylesheet for box label PDF generator
-PAGE_SIZE = os.environ["MBT_PAGE_SIZE"] if "MBT_PAGE_SIZE" in os.environ else "Letter"
-BOX_LABEL_STYLESHEET = (
-    """
-    @page {
-        size: """
-    + PAGE_SIZE
-    + """;
-        margin: 0.2cm;
-    }
-    table {
-        width: 100%
-        table-layout: fixed;
-        font-family: sans-serif;
-    }
-    """
-)
 
 # database record CLI action handler functions
 CLI_ACTION = {
@@ -192,37 +170,6 @@ def _do_init(args: dict) -> ErrStr | None:
     return None
 
 
-def _gen_label_uri(user: str, box: str, room: str, color: str):
-    """generate URI for moving box label QR code"""
-
-    # determine box URI text for QR code
-    uri = f"movingbox://{user}/{box}?room={room},color={color}"
-    return uri
-
-
-# to_svg_str() borrowed from qrcodegen demo
-def to_svg_str(qrcode: QrCode, border: int) -> str:
-    """Returns a string of SVG code for an image depicting the given QR Code, with the given number
-        of border modules. The string always uses Unix newlines (\n), regardless of the platform."""
-    if border < 0:
-        raise ValueError("Border must be non-negative")
-    parts = []
-    for y_pos in range(qrcode.get_size()):
-        for x_pos in range(qrcode.get_size()):
-            if qrcode.get_module(x_pos, y_pos):
-                parts.append(f"M{x_pos+border},{y_pos+border}h1v1h-1z")
-    return f"""<?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
-            "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-        <svg xmlns="http://www.w3.org/2000/svg" version="1.1"
-            viewBox="0 0 {qrcode.get_size()+border*2}
-            {qrcode.get_size()+border*2}" stroke="none">
-            <rect width="100%" height="100%" fill="#FFFFFF"/>
-            <path d="{" ".join(parts)}" fill="#000000"/>
-        </svg>
-        """
-
-
 def _do_batch_commit(table_class, db_obj: MoveBoxTrackerDB, **kwargs) \
         -> ErrStr | None:
     """change location of boxes in a batch to indicate the batch was moved as a group"""
@@ -302,127 +249,6 @@ def _do_record_cli(args: dict) -> ErrStr | None:
     return err
 
 
-def _gen_label_qrcode(
-    tmpdirpath: Path, user: str, box: str, room: str, color: str
-) -> str:
-    """generate QR code in a file in the temporary directory for use in PDF generation"""
-
-    # generate QR code in SVG for use in PDF
-    errcorlvl = QrCode.Ecc.LOW  # Error correction level
-    qr_svg_file = f"label_{box}.svg"
-    qr_svg_path = Path(tmpdirpath) / qr_svg_file
-    qrcode = QrCode.encode_text(
-             _gen_label_uri(user, box, room, color),
-             errcorlvl)
-
-    # qrcode.save(f"{tmpdirpath}/{qr_svg_file}")
-    with open(qr_svg_path, "wt", encoding="utf-8") as qr_file:
-        qr_file.write(to_svg_str(qrcode, border=5))
-    return qr_svg_file
-
-
-def _gen_label_html(box_data: dict, tmpdirpath: Path, qr_svg_file: Path) -> str:
-    """generate HTML in a file in the temporary directory for use in PDF generation"""
-
-    # collect parameters
-    box = str(box_data["box"]).zfill(4)
-    color = Color(box_data["color"]).name.replace(" ", "")
-    room = str(box_data["room"]).upper()
-
-    # generate label cell
-    # 4 of these will be printed on each page
-    label_cell = [
-        '<table id="label_cell">',
-        "<tr>",
-        f"<td><big><b>{room}</b></big></td>",
-        f'<td style="text-align: right"><big>Box&nbsp;{box}</big></td>',
-        "</tr>",
-        "<tr>",
-        f'<td style="background: {color}">&nbsp;</td>',
-        f'<td><img src="{qr_svg_file}"></td>',
-        "</tr>",
-        "<tr>",
-        '<td colspan=2 style="text-align: center">',
-        "Lost &amp; found contact:",
-        "<br/>",
-        f'{box_data["found"]}',
-        "</td>",
-        "</tr>",
-        "<tr>",
-        "<td colspan=2>&nbsp;</td>",
-        "</tr>",
-        "</table>",
-    ]
-
-    # generate HTML for label
-    label_html = (
-        [
-            "<html>",
-            "<head>",
-            "</head>",
-            "<body>",
-            "<table>",
-            "<tr>",
-            "<td>",
-        ]
-        + label_cell
-        + ["</td>", "<td>&nbsp;</td>", "<td>"]
-        + label_cell
-        + ["</td>", "</tr>", "<tr>", "<td>"]
-        + label_cell
-        + ["</td>", "<td>&nbsp;</td>", "<td>"]
-        + label_cell
-        + ["</td>", "</tr>", "</table>", "</body>", "</html>"]
-    )
-    html_file_path = Path(f"{tmpdirpath}/label_{box}.html")
-    with open(html_file_path, "wt", encoding="utf-8") as textfile:
-        textfile.write("\n".join(label_html))
-    return html_file_path
-
-
-def _gen_label(box_data: dict, outdir: Path) -> None:
-    """generate one moving box label from a dict of the box's data"""
-
-    # collect parameters
-    user = str(box_data["user"])
-    box = str(box_data["box"]).zfill(4)
-    color = Color(box_data["color"]).name.replace(" ", "")
-    room = str(box_data["room"]).upper()
-
-    # verify output directory exists
-    if not outdir.exists():
-        outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
-
-    # skip this label if destination PDF exists
-    label_pdf_basename = f"label_{box}.pdf"
-    if Path(outdir / label_pdf_basename).is_file():
-        print(f"skipping {box}: label PDF exists at {label_pdf_basename}")
-        return
-
-    # allocate temporary directory
-    tmpdirpath = tempfile.mkdtemp(prefix="moving_label_")
-
-    # generate QR code in SVG for use in PDF
-    qr_svg_file = _gen_label_qrcode(tmpdirpath, user, box, room, color)
-
-    # Build moving box label as HTML and print.
-    # Simple HTML is PDF'ed & printed, then discarded when the temporary directory is removed.
-    # Just build HTML strings to minimize library dependencies.
-    html_file_path = _gen_label_html(box_data, tmpdirpath, qr_svg_file)
-    css = CSS(string=BOX_LABEL_STYLESHEET)
-
-    # generate PDF
-    label_pdf_file = Path(tmpdirpath + "/" + label_pdf_basename)
-    doc = HTML(filename=html_file_path)
-    doc.write_pdf(
-        target=label_pdf_file,
-        stylesheets=[css],
-        attachments=[f"{tmpdirpath}/{qr_svg_file}"],
-        optimize_size=("fonts", "images"),
-    )
-    move(label_pdf_file, outdir)
-
-
 def _do_label(args: dict) -> ErrStr | None:
     """print label(s) for specified box ids"""
     db_file = _get_db_file(args)
@@ -449,13 +275,13 @@ def _do_label(args: dict) -> ErrStr | None:
         if match:
             # process start-end range of box ids
             start, end = match.groups()
-            for box_num in range(start, end):
+            for box_num in range(int(start), int(end)):
                 box_data = rec_obj.box_label_data(box_num)
-                _gen_label(box_data, outdir)
+                MoveBoxLabel.gen_label(box_data, outdir)
         else:
             # process a single box id
             box_data = rec_obj.box_label_data(box_id)
-            _gen_label(box_data, outdir)
+            MoveBoxLabel.gen_label(box_data, outdir)
     return None
 
 
