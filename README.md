@@ -246,7 +246,7 @@ top-level options:
 label generation options:
 
 - --outdir LABELDIR:      directory to place new label PDF files
-- ID:                   box record id number
+- ID:                     box record id number (like 23) or range of numbers (like 23-28, no spaces around the dash)
 
 By default moveboxtracker generates PDF output for US Letter size pages. To use a different page size, set the MBT_PAGE_SIZE environment variable before running the script. For example, to use A3 size pages, set "export MBT_PAGE_SIZE=A3" in your shell or its rc setup script before running moveboxtracker.
 
