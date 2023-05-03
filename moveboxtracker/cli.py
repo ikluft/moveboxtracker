@@ -168,7 +168,7 @@ def _expand_id_list(id_list: list) -> list:
         if match:
             # process start-end range of box ids
             start, end = match.groups()
-            for box_num in range(int(start), int(end)):
+            for box_num in range(int(start), int(end)+1):  # +1 so last item in range is included
                 ids.append(box_num)
             continue
 
@@ -176,7 +176,7 @@ def _expand_id_list(id_list: list) -> list:
         match = re.fullmatch(r"^(\d+)$", str(id_num))
         if match:
             # process a single box id
-            id_match = match.groups()
+            id_match = match.group(1)
             ids.append(int(id_match))
             continue
 
