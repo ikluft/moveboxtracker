@@ -226,6 +226,23 @@ See also the "db location" subcommand for lower level but broader access to the 
 
 ### room subcommand
 
+The "room" subcommand creates or modifies a room record.
+If an --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
+
+    moveboxtracker room [-h] [--db DB] [--id ID] [--name NAME] [--color COLOR] [--list]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+data field options:
+- --name NAME:          room name string
+- --color COLOR:        color name string, which must be a valid web color
+
+action options: (actions to take instead of creating or updating a record)
+- --list:               display a list of the room records
 
 ### scan subcommand
 
