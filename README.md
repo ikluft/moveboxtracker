@@ -238,14 +238,40 @@ top-level options:
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+- --id ID:              record id number
 - --name NAME:          room name string
 - --color COLOR:        color name string, which must be a valid web color
 
 action options: (actions to take instead of creating or updating a record)
 - --list:               display a list of the room records
 
+See also the "db room" subcommand for lower level but broader access to the database.
+
 ### scan subcommand
 
+The "scan" subcommand creates or modifies a scan record, for recording a movement of a box.
+If an --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
+
+    moveboxtracker scan [-h] [--db DB] [--id ID] [--box BOX] [--batch BATCH] [--user USER] [--timestamp TIMESTAMP] [--list | --boxes BOXID [BOXID ...]]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+data field options:
+- --id ID:              record id number
+- --box BOX:            id number of the box which is being moved
+- --batch BATCH:        id number of the batch group which the box will move along with
+- --user USER:          id referring to user table, originating user who scanned the box or entered its scan data, defaults to the database's default user
+- --timestamp TIMESTAMP: time of the scan, defaults to the current time at record creation
+
+action options: (actions to take instead of creating or updating a record)
+- --list:               display a list of the room records
+- --commit:             commit the batch move by updating the location of all boxes in the batch to the batch location (requires or will prompt for --id)
+
+See also the "db scan" subcommand for lower level but broader access to the database.
 
 ### user subcommand
 
