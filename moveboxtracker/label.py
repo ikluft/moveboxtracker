@@ -32,7 +32,7 @@ BOX_LABEL_STYLESHEET = (
 # to_svg_str() borrowed from qrcodegen demo
 def to_svg_str(qrcode: QrCode, border: int) -> str:
     """Returns a string of SVG code for an image depicting the given QR Code, with the given number
-        of border modules. The string always uses Unix newlines (\n), regardless of the platform."""
+    of border modules. The string always uses Unix newlines (\n), regardless of the platform."""
     if border < 0:
         raise ValueError("Border must be non-negative")
     parts = []
@@ -118,9 +118,7 @@ class MoveBoxLabel:
         errcorlvl = QrCode.Ecc.LOW  # Error correction level
         qr_svg_file = f"label_{self.box}.svg"
         qr_svg_path = Path(tmpdirpath) / qr_svg_file
-        qrcode = QrCode.encode_text(
-                 self._gen_label_uri(),
-                 errcorlvl)
+        qrcode = QrCode.encode_text(self._gen_label_uri(), errcorlvl)
 
         # qrcode.save(f"{tmpdirpath}/{qr_svg_file}")
         with open(qr_svg_path, "wt", encoding="utf-8") as qr_file:
@@ -146,7 +144,7 @@ class MoveBoxLabel:
             '<td colspan=2 style="text-align: center">',
             "Lost &amp; found contact:",
             "<br/>",
-            f'{self.found}',
+            f"{self.found}",
             "</td>",
             "</tr>",
             "<tr>",

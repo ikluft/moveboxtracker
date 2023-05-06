@@ -73,9 +73,11 @@ ErrStr = str
 
 # package and program name
 PKG_NAME = "moveboxtracker"
-PROG_NAME = Path(sys.modules["__main__"].__file__).name \
-    if hasattr(sys.modules["__main__"], "__file__") \
+PROG_NAME = (
+    Path(sys.modules["__main__"].__file__).name
+    if hasattr(sys.modules["__main__"], "__file__")
     else lib_programname.get_path_executed_script().name
+)
 
 # database record CLI action handler functions
 CLI_ACTION = {
@@ -168,7 +170,9 @@ def _expand_id_list(id_list: list) -> list:
         if match:
             # process start-end range of box ids
             start, end = match.groups()
-            for box_num in range(int(start), int(end)+1):  # +1 so last item in range is included
+            for box_num in range(
+                int(start), int(end) + 1
+            ):  # +1 so last item in range is included
                 ids.append(box_num)
             continue
 
@@ -197,8 +201,7 @@ def _do_init(args: dict) -> ErrStr | None:
     return None
 
 
-def _do_batch_commit(table_class, db_obj: MoveBoxTrackerDB, **kwargs) \
-        -> ErrStr | None:
+def _do_batch_commit(table_class, db_obj: MoveBoxTrackerDB, **kwargs) -> ErrStr | None:
     """change location of boxes in a batch to indicate the batch was moved as a group"""
     if table_class is not MoveDbBatchMove:
         return f"commit operation only valid on batch record (got f{table_class}"
@@ -401,7 +404,12 @@ def _do_db_delete(
 
 def _common_db_file_arg(arg_parser: argparse.ArgumentParser) -> None:
     arg_parser.add_argument(
-        "--db", "--db_file", dest="db_file", action="store", metavar="DB", help="database file"
+        "--db",
+        "--db_file",
+        dest="db_file",
+        action="store",
+        metavar="DB",
+        help="database file",
     )
 
 
@@ -426,8 +434,8 @@ def _gen_arg_subparsers_batch(subparsers) -> None:
     parser_batch.add_argument("--id")  # db field
     parser_batch.add_argument("--timestamp")  # db field
     parser_batch.add_argument("--location")  # db field
-    parser_batch.add_argument("--commit", action='store_true')  # action handler
-    parser_batch.add_argument("--list", action='store_true')  # action handler
+    parser_batch.add_argument("--commit", action="store_true")  # action handler
+    parser_batch.add_argument("--list", action="store_true")  # action handler
     parser_batch.set_defaults(table="batch", func=_do_record_cli)
 
 
@@ -443,7 +451,7 @@ def _gen_arg_subparsers_box(subparsers) -> None:
     parser_box.add_argument("--room")  # db field
     parser_box.add_argument("--user")  # db field
     parser_box.add_argument("--image")  # db field
-    parser_box.add_argument("--list", action='store_true')  # action handler
+    parser_box.add_argument("--list", action="store_true")  # action handler
     parser_box.set_defaults(table="box", func=_do_record_cli)
 
 
@@ -457,21 +465,19 @@ def _gen_arg_subparsers_image(subparsers) -> None:
     parser_image.add_argument("--image_file", "--file")  # db field
     parser_image.add_argument("--description", "--info", "--desc")  # db field
     parser_image.add_argument("--timestamp")  # db field
-    parser_image.add_argument("--list", action='store_true')  # action handler
+    parser_image.add_argument("--list", action="store_true")  # action handler
     parser_image.set_defaults(table="image", func=_do_record_cli)
 
 
 def _gen_arg_subparsers_item(subparsers) -> None:
     # item subparser
-    parser_item = subparsers.add_parser(
-        "item", help="create or update an item record"
-    )
+    parser_item = subparsers.add_parser("item", help="create or update an item record")
     _common_db_file_arg(parser_item)
     parser_item.add_argument("--id")  # db field
     parser_item.add_argument("--box")  # db field
     parser_item.add_argument("--description", "--info", "--desc")  # db field
     parser_item.add_argument("--image")  # db field
-    parser_item.add_argument("--list", action='store_true')  # action handler
+    parser_item.add_argument("--list", action="store_true")  # action handler
     parser_item.set_defaults(table="item", func=_do_record_cli)
 
 
@@ -483,28 +489,24 @@ def _gen_arg_subparsers_location(subparsers) -> None:
     _common_db_file_arg(parser_location)
     parser_location.add_argument("--id")  # db field
     parser_location.add_argument("--name")  # db field
-    parser_location.add_argument("--list", action='store_true')  # action handler
+    parser_location.add_argument("--list", action="store_true")  # action handler
     parser_location.set_defaults(table="location", func=_do_record_cli)
 
 
 def _gen_arg_subparsers_room(subparsers) -> None:
     # room subparser
-    parser_room = subparsers.add_parser(
-        "room", help="create or update a room record"
-    )
+    parser_room = subparsers.add_parser("room", help="create or update a room record")
     _common_db_file_arg(parser_room)
     parser_room.add_argument("--id")  # db field
     parser_room.add_argument("--name")  # db field
     parser_room.add_argument("--color")  # db field
-    parser_room.add_argument("--list", action='store_true')  # action handler
+    parser_room.add_argument("--list", action="store_true")  # action handler
     parser_room.set_defaults(table="room", func=_do_record_cli)
 
 
 def _gen_arg_subparsers_scan(subparsers) -> None:
     # scan subparser
-    parser_scan = subparsers.add_parser(
-        "scan", help="create or update a scan record"
-    )
+    parser_scan = subparsers.add_parser("scan", help="create or update a scan record")
     _common_db_file_arg(parser_scan)
     parser_scan.add_argument("--id")  # db field
     parser_scan.add_argument("--box")  # db field
@@ -512,20 +514,18 @@ def _gen_arg_subparsers_scan(subparsers) -> None:
     parser_scan.add_argument("--user")  # db field
     parser_scan.add_argument("--timestamp")  # db field
     handler_group = parser_scan.add_mutually_exclusive_group()
-    handler_group.add_argument("--list", action='store_true')  # action handler
+    handler_group.add_argument("--list", action="store_true")  # action handler
     handler_group.add_argument("--boxes", nargs="+", metavar="BOXID")  # action handler
     parser_scan.set_defaults(table="scan", func=_do_record_cli)
 
 
 def _gen_arg_subparsers_user(subparsers) -> None:
     # user subparser
-    parser_user = subparsers.add_parser(
-        "user", help="create or update a user record"
-    )
+    parser_user = subparsers.add_parser("user", help="create or update a user record")
     _common_db_file_arg(parser_user)
     parser_user.add_argument("--id")  # db field
     parser_user.add_argument("--name")  # db field
-    parser_user.add_argument("--list", action='store_true')  # action handler
+    parser_user.add_argument("--list", action="store_true")  # action handler
     parser_user.set_defaults(table="user", func=_do_record_cli)
 
 

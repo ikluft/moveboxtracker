@@ -302,8 +302,12 @@ class MoveDbRecord:
         if "image_file" in data and "hash" in data:
             return  # do not interpolate image twice
         image_db = MoveDbImage(self.mbt_db)
-        (image_internal, image_mimetype, image_encoding, image_hash) \
-            = image_db.get_image_file(image_path)
+        (
+            image_internal,
+            image_mimetype,
+            image_encoding,
+            image_hash,
+        ) = image_db.get_image_file(image_path)
         data["image_file"] = str(image_internal)
         data["mimetype"] = image_mimetype
         data["encoding"] = image_encoding
@@ -322,7 +326,7 @@ class MoveDbRecord:
         if ts_dt.tzinfo is None or ts_dt.tzinfo.utcoffset(ts_dt) is None:
             ts_dt.replace(tzinfo=LOCAL_TZ)
         ts_dt_utc = ts_dt.astimezone(timezone.utc)
-        return ts_dt_utc.strftime('%Y-%m-%d %H:%M:%SZ')
+        return ts_dt_utc.strftime("%Y-%m-%d %H:%M:%SZ")
 
     def _interpolate_fields(self, data: dict) -> None:
         """interpolate foreign keys & image file paths into record numbers, validate color names"""
@@ -537,7 +541,7 @@ class MoveDbImage(MoveDbRecord):
         """calculate SHA256 hash of file and return binary value"""
         hasher = hashlib.sha256()
         blocksize = 65536
-        with image_path.open('rb') as img_file:
+        with image_path.open("rb") as img_file:
             while buf := img_file.read(blocksize):
                 hasher.update(buf)
         return (hasher.hexdigest(), hasher.digest())
@@ -545,13 +549,18 @@ class MoveDbImage(MoveDbRecord):
     def get_image_file(self, image_path: Path) -> (bytes, str):
         """get image file info, and app-controlled path to existing or new image file"""
         (image_hashstr, image_hash) = self._image_hash(image_path)
-        image_internal = (self.mbt_db.db_imgdir() / (image_hashstr + "_" + image_path.name)) \
-            .resolve(strict=False)
+        image_internal = (
+            self.mbt_db.db_imgdir() / (image_hashstr + "_" + image_path.name)
+        ).resolve(strict=False)
         try:
             image_internal.symlink_to(image_path)
         except Exception as exc:
-            raise RuntimeError(f"failed to symlink {image_internal} -> {image_path}") from exc
-        (image_mimetype, image_encoding) = mimetypes.guess_type(image_path, strict=False)
+            raise RuntimeError(
+                f"failed to symlink {image_internal} -> {image_path}"
+            ) from exc
+        (image_mimetype, image_encoding) = mimetypes.guess_type(
+            image_path, strict=False
+        )
         return (image_internal, image_mimetype, image_encoding, image_hash)
 
     @classmethod
@@ -564,8 +573,12 @@ class MoveDbImage(MoveDbRecord):
         if not image_path.exists():
             raise RuntimeError(f"image file {image_path} does not exist")
 
-        (image_internal, image_mimetype, image_encoding, image_hash) \
-            = image_db.get_image_file(image_path)
+        (
+            image_internal,
+            image_mimetype,
+            image_encoding,
+            image_hash,
+        ) = image_db.get_image_file(image_path)
         # if image is already in database, get record number based on hash
         image_id = image_db.kv_search(key="hash", value=image_hash)
 
@@ -648,10 +661,12 @@ class MoveDbBatchMove(MoveDbRecord):
         box_table = MoveDbMovingBox.table_name()
         cur = mbt_db.conn.cursor()
         sql_data = {"batch": batch_id}
-        sql_cmd = f"UPDATE {box_table} AS box " \
-            + "SET location = batch.location " \
-            + f"FROM {batch_table} AS batch, {scan_table} AS scan " \
+        sql_cmd = (
+            f"UPDATE {box_table} AS box "
+            + "SET location = batch.location "
+            + f"FROM {batch_table} AS batch, {scan_table} AS scan "
             + "WHERE batch.id == :batch AND scan.batch == batch.id AND scan.box == box.id"
+        )
         print(f"executing SQL [{sql_cmd}] with {sql_data}", file=sys.stderr)
         cur.execute(sql_cmd, sql_data)
         count = cur.rowcount
