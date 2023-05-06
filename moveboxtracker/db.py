@@ -168,9 +168,7 @@ class MoveBoxTrackerDB:
         # check required data fields if UI didn't privide a prompt-callback
         if self.prompt is None:
             if data is None:
-                raise RuntimeError(
-                    "data for move_project is needed to initialize a new database"
-                )
+                raise RuntimeError("data for move_project is needed to initialize a new database")
             missing = MoveDbMoveProject.check_missing_fields(data)
             if len(missing) > 0:
                 raise RuntimeError(f"missing data for table initialization: {missing}")
@@ -221,9 +219,7 @@ class MoveDbRecord:
 
     def __init__(self, mbt_db: MoveBoxTrackerDB):
         if self.__class__.__name__ not in DB_CLASS_TO_TABLE:
-            raise RuntimeError(
-                f"MoveDbRecord: class {self.__class__.__name__} is not recognized"
-            )
+            raise RuntimeError(f"MoveDbRecord: class {self.__class__.__name__} is not recognized")
         self.mbt_db = mbt_db
 
     @classmethod
@@ -231,9 +227,7 @@ class MoveDbRecord:
         """return list of the table's fields"""
         if "field_data" not in vars(cls):
             class_name = cls.__name__
-            raise NotImplementedError(
-                f"{class_name} does not provide required field_data"
-            )
+            raise NotImplementedError(f"{class_name} does not provide required field_data")
         field_data = vars(cls)["field_data"]
         return list(field_data.keys())
 
@@ -242,9 +236,7 @@ class MoveDbRecord:
         """return list of the table's required fields"""
         if "field_data" not in vars(cls):
             class_name = cls.__name__
-            raise NotImplementedError(
-                f"{class_name} does not provide required field_data"
-            )
+            raise NotImplementedError(f"{class_name} does not provide required field_data")
         req_fields = []
         field_data = vars(cls)["field_data"]
         for key in field_data.keys():
@@ -276,9 +268,7 @@ class MoveDbRecord:
     def table_name(cls) -> str:
         """find database table name for the current class"""
         if cls.__name__ not in DB_CLASS_TO_TABLE:
-            raise RuntimeError(
-                f"MoveDbRecord.table_name(): class {cls.__name__} is not recognized"
-            )
+            raise RuntimeError(f"MoveDbRecord.table_name(): class {cls.__name__} is not recognized")
         return DB_CLASS_TO_TABLE[cls.__name__]
 
     def _prompt_missing_fields(self, data: dict) -> None:
@@ -339,9 +329,7 @@ class MoveDbRecord:
                 and not re.fullmatch(r"^\d+$", data[key])
             ):
                 # reference field value is not an integer - interpolate it via reference key
-                field_id = field_data[key]["references"].get_or_create(
-                    self.mbt_db, data[key], data
-                )
+                field_id = field_data[key]["references"].get_or_create(self.mbt_db, data[key], data)
                 data[key] = field_id
             if "interpolate" in field_data[key]:
                 match field_data[key]["interpolate"]:
@@ -361,9 +349,7 @@ class MoveDbRecord:
                 if "generate" in field_data[key]:
                     # use a specified function to generate the field
                     generate_func = field_data[key]["generate"]
-                    if not callable(generate_func) and str(generate_func) in vars(
-                        self.__class__
-                    ):
+                    if not callable(generate_func) and str(generate_func) in vars(self.__class__):
                         generate_func = vars(self.__class__)[generate_func]
                     data[key] = generate_func(self, data)
 
@@ -555,12 +541,8 @@ class MoveDbImage(MoveDbRecord):
         try:
             image_internal.symlink_to(image_path)
         except Exception as exc:
-            raise RuntimeError(
-                f"failed to symlink {image_internal} -> {image_path}"
-            ) from exc
-        (image_mimetype, image_encoding) = mimetypes.guess_type(
-            image_path, strict=False
-        )
+            raise RuntimeError(f"failed to symlink {image_internal} -> {image_path}") from exc
+        (image_mimetype, image_encoding) = mimetypes.guess_type(image_path, strict=False)
         return (image_internal, image_mimetype, image_encoding, image_hash)
 
     @classmethod
@@ -598,18 +580,14 @@ class MoveDbImage(MoveDbRecord):
     def gen_hash(self, data: dict) -> str:
         """get hash from image file"""
         if "image_file" not in data:
-            raise RuntimeError(
-                "image_file not found in query data - can't generate hash value"
-            )
+            raise RuntimeError("image_file not found in query data - can't generate hash value")
         (_, image_hash) = self._image_hash(data["image_file"])
         data["hash"] = image_hash
 
     def gen_mimetype(self, data: dict) -> str:
         """get mimetype from image data"""
         if "mimetype" not in data:
-            raise RuntimeError(
-                "mimetype not found in query data - can't generate value"
-            )
+            raise RuntimeError("mimetype not found in query data - can't generate value")
         data["mimetype"] = data["mimetype"]
 
 
@@ -779,9 +757,7 @@ class MoveDbMovingBox(MoveDbRecord):
         # make sure we have a box id
         table = self.__class__.table_name()
         if box_id is None:
-            raise RuntimeError(
-                f"box label data request on {table} is missing 'id' parameter"
-            )
+            raise RuntimeError(f"box label data request on {table} is missing 'id' parameter")
 
         # set up database connection
         cur = self.mbt_db.conn.cursor()

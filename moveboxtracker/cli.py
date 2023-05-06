@@ -170,9 +170,7 @@ def _expand_id_list(id_list: list) -> list:
         if match:
             # process start-end range of box ids
             start, end = match.groups()
-            for box_num in range(
-                int(start), int(end) + 1
-            ):  # +1 so last item in range is included
+            for box_num in range(int(start), int(end) + 1):  # +1 so last item in range is included
                 ids.append(box_num)
             continue
 
@@ -354,9 +352,7 @@ def _do_db(args: dict) -> ErrStr | None:
     return err
 
 
-def _do_db_create(
-    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
-) -> ErrStr | None:
+def _do_db_create(data: dict, table_class: str, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
     """lower-level database access: create a record"""
     rec_obj = table_class(db_obj)
     res_id = rec_obj.db_create(data)
@@ -366,9 +362,7 @@ def _do_db_create(
     return None
 
 
-def _do_db_read(
-    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
-) -> ErrStr | None:
+def _do_db_read(data: dict, table_class: str, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
     """lower-level database access: read a record"""
     rec_obj = table_class(db_obj)
     res = rec_obj.db_read(data)
@@ -378,9 +372,7 @@ def _do_db_read(
     return None
 
 
-def _do_db_update(
-    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
-) -> ErrStr | None:
+def _do_db_update(data: dict, table_class: str, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
     """lower-level database access: update a record"""
     rec_obj = table_class(db_obj)
     res = rec_obj.db_update(data)
@@ -390,9 +382,7 @@ def _do_db_update(
     return None
 
 
-def _do_db_delete(
-    data: dict, table_class: str, db_obj: MoveBoxTrackerDB
-) -> ErrStr | None:
+def _do_db_delete(data: dict, table_class: str, db_obj: MoveBoxTrackerDB) -> ErrStr | None:
     """lower-level database access: delete a record"""
     rec_obj = table_class(db_obj)
     res = rec_obj.db_delete(data)
@@ -415,9 +405,7 @@ def _common_db_file_arg(arg_parser: argparse.ArgumentParser) -> None:
 
 def _gen_arg_subparsers_init(subparsers) -> None:
     # init subparser
-    parser_init = subparsers.add_parser(
-        "init", help="initialize new moving box database"
-    )
+    parser_init = subparsers.add_parser("init", help="initialize new moving box database")
     _common_db_file_arg(parser_init)
     parser_init.add_argument("--primary_user", "--user")  # db field
     parser_init.add_argument("--title")  # db field
@@ -427,9 +415,7 @@ def _gen_arg_subparsers_init(subparsers) -> None:
 
 def _gen_arg_subparsers_batch(subparsers) -> None:
     # batch subparser
-    parser_batch = subparsers.add_parser(
-        "batch", help="create or update a batch record"
-    )
+    parser_batch = subparsers.add_parser("batch", help="create or update a batch record")
     _common_db_file_arg(parser_batch)
     parser_batch.add_argument("--id")  # db field
     parser_batch.add_argument("--timestamp")  # db field
@@ -441,9 +427,7 @@ def _gen_arg_subparsers_batch(subparsers) -> None:
 
 def _gen_arg_subparsers_box(subparsers) -> None:
     # box subparser
-    parser_box = subparsers.add_parser(
-        "box", help="create or update a moving box record"
-    )
+    parser_box = subparsers.add_parser("box", help="create or update a moving box record")
     _common_db_file_arg(parser_box)
     parser_box.add_argument("--id")  # db field
     parser_box.add_argument("--location")  # db field
@@ -457,9 +441,7 @@ def _gen_arg_subparsers_box(subparsers) -> None:
 
 def _gen_arg_subparsers_image(subparsers) -> None:
     # image subparser
-    parser_image = subparsers.add_parser(
-        "image", help="create or update an image record"
-    )
+    parser_image = subparsers.add_parser("image", help="create or update an image record")
     _common_db_file_arg(parser_image)
     parser_image.add_argument("--id")  # db field
     parser_image.add_argument("--image_file", "--file")  # db field
@@ -483,9 +465,7 @@ def _gen_arg_subparsers_item(subparsers) -> None:
 
 def _gen_arg_subparsers_location(subparsers) -> None:
     # location subparser
-    parser_location = subparsers.add_parser(
-        "location", help="create or update a location record"
-    )
+    parser_location = subparsers.add_parser("location", help="create or update a location record")
     _common_db_file_arg(parser_location)
     parser_location.add_argument("--id")  # db field
     parser_location.add_argument("--name")  # db field
@@ -531,9 +511,7 @@ def _gen_arg_subparsers_user(subparsers) -> None:
 
 def _gen_arg_subparsers_label(subparsers) -> None:
     # label subparser
-    parser_label = subparsers.add_parser(
-        "label", help="print label(s) for specified box ids"
-    )
+    parser_label = subparsers.add_parser("label", help="print label(s) for specified box ids")
     _common_db_file_arg(parser_label)
     parser_label.add_argument(
         "--outdir",
@@ -552,32 +530,24 @@ def _gen_arg_subparsers_merge(subparsers) -> None:
         "merge", help="merge in an external SQLite database file, from another device"
     )
     _common_db_file_arg(parser_merge)
-    parser_merge.add_argument(
-        "db_merge", nargs=1, metavar="DB2", help="database file to merge in"
-    )
+    parser_merge.add_argument("db_merge", nargs=1, metavar="DB2", help="database file to merge in")
     parser_merge.set_defaults(func=_do_merge)
 
 
 def _gen_arg_subparsers_dump(subparsers) -> None:
     # dump subparser
-    parser_dump = subparsers.add_parser(
-        "dump", help="dump database contents to standard output"
-    )
+    parser_dump = subparsers.add_parser("dump", help="dump database contents to standard output")
     _common_db_file_arg(parser_dump)
     parser_dump.set_defaults(func=_do_dump)
 
 
-def _gen_arg_subparser_table(
-    subparsers_db, parser_db_parent, table_name, help_str, fields
-) -> None:
+def _gen_arg_subparser_table(subparsers_db, parser_db_parent, table_name, help_str, fields) -> None:
     subparser_table = subparsers_db.add_parser(
         table_name, help=help_str, parents=[parser_db_parent]
     )
     subparser_table.set_defaults(table_name=table_name)
     for field in fields:
-        subparser_table.add_argument(
-            f"--{field}", help=f"{field} field of {table_name} table"
-        )
+        subparser_table.add_argument(f"--{field}", help=f"{field} field of {table_name} table")
 
 
 def _omit_id(in_list: list) -> list:
@@ -589,9 +559,7 @@ def _omit_id(in_list: list) -> list:
 
 def _gen_arg_subparsers_db(subparsers) -> None:
     # define subparsers for low-level database access
-    parser_db = subparsers.add_parser(
-        "db", help="low-level database access subcommands"
-    )
+    parser_db = subparsers.add_parser("db", help="low-level database access subcommands")
     parser_db.set_defaults(func=_do_db)
 
     # parser_db_parent contains template for common parameters in all the db subparsers

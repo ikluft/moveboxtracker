@@ -33,9 +33,14 @@ Bug_Tracker = "https://github.com/ikluft/moveboxtracker/issues"
 
 [project.scripts]
 movebox = "moveboxtracker.cli:run"
+moveboxtracker = "moveboxtracker.cli:run"
 
 [project.optional-dependencies]
 test = [
     "flake8 >= 3.0.0, <7.0"
 ]
 doc = ["sphinx"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
