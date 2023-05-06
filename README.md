@@ -275,6 +275,25 @@ See also the "db scan" subcommand for lower level but broader access to the data
 
 ### user subcommand
 
+The "user" subcommand creates or modifies a user record.
+If an --id parameter is present, it modifies that record.
+Otherwise it creates a new one.
+When creating a new record, missing data fields will be filled via command-line prompt.
+
+    moveboxtracker user [-h] [--db DB] [--id ID] [--name NAME] [--list]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+data field options:
+- --id ID:              record id number
+- --name NAME:          user name string, email address recommended
+
+action options: (actions to take instead of creating or updating a record)
+- --list:               display a list of the room records
+
+See also the "db user" subcommand for lower level but broader access to the database.
 
 ### label subcommand
 
