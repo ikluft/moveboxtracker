@@ -320,7 +320,11 @@ The merge subcommand is not yet implemented. It will collect data from another S
 
 The dump subcommand prints out the contents of the SQLite database file. The path to the database file is a required parameter.
 
-    moveboxtracker dump [-h] DB
+    moveboxtracker dump [-h] [--db DB]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 ### db subcommand
 
