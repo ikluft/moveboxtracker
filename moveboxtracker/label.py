@@ -10,6 +10,15 @@ from qrcodegen import QrCode
 from colorlookup import Color
 from weasyprint import HTML, CSS
 
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPDF
+
+# map label type names to subclasses
+NAME_TO_LABEL_CLASS = {
+    "page": "MoveBoxLabelPage",
+    "bagtag": "MoveBoxLabelBagTag",
+}
+
 # CSS stylesheet for box label PDF generator
 PAGE_SIZE = os.environ["MBT_PAGE_SIZE"] if "MBT_PAGE_SIZE" in os.environ else "Letter"
 BOX_LABEL_STYLESHEET = (
@@ -62,53 +71,96 @@ class MoveBoxLabel:
                 raise RuntimeError(f"missing {key} in label parameters")
 
         # collect parameters
-        self.box = str(box_data["box"]).zfill(4)
-        self.room = str(box_data["room"]).upper()
-        self.color = Color(box_data["color"]).name.replace(" ", "")
-        self.location = str(box_data["location"])
-        self.user = str(box_data["user"])
-        self.found = str(box_data["found"])
+        self.field = {}
+        self.field["box"] = str(box_data["box"]).zfill(4)
+        self.field["room"] = str(box_data["room"]).upper()
+        self.field["color"] = Color(box_data["color"]).name.replace(" ", "")
+        self.field["location"] = str(box_data["location"])
+        self.field["user"] = str(box_data["user"])
+        self.field["found"] = str(box_data["found"])
+        if "type" in box_data:
+            self.type = str(box_data["type"])
+        self.tempdirpath = None  # lazy initialization: allocated 1st call to tempdir() method
         # setattr(self, key, box_data[key])
 
     @classmethod
     def gen_label(cls, box_data: dict, outdir: Path) -> None:
         """generate one moving box label file from a dict of the box's data"""
-        label_obj = MoveBoxLabel(box_data, outdir)
-        label_obj._gen_label()
 
-    def get_box(self):
-        """accessor for box attribute"""
-        return self.box
+        # look up subclass to generate requested label type, default to HTML-layout full-page
+        if "type" in box_data:
+            label_type = box_data["type"]
+            if label_type in NAME_TO_LABEL_CLASS:
+                label_class_name = NAME_TO_LABEL_CLASS[label_type]
+                global_syms = globals()
+                if label_class_name in global_syms:
+                    label_class = global_syms[label_class_name]
+                else:
+                    raise RuntimeError(f"label class {label_class_name} not found")
+            else:
+                raise RuntimeError(f"no label class found to handle {label_type} type")
+        else:
+            label_class = MoveBoxLabelPage  # default to HTML-layout full-page label
 
-    def get_room(self):
-        """accessor for room attribute"""
-        return self.room
+        # verify output directory exists
+        if not outdir.exists():
+            outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
 
-    def get_color(self):
-        """accessor for color attribute"""
-        return self.color
+        # generate label using the subclass' gen_label2() method
+        label_obj = label_class(box_data, outdir)
+        label_obj.gen_label2()
 
-    def get_location(self):
-        """accessor for location attribute"""
-        return self.location
+    def box(self) -> str:
+        """accessor for box field"""
+        return self.field["box"]
 
-    def get_user(self):
-        """accessor for user attribute"""
-        return self.user
+    def room(self) -> str:
+        """accessor for room field"""
+        return self.field["room"]
 
-    def get_found(self):
-        """accessor for found attribute"""
-        return self.found
+    def color(self) -> str:
+        """accessor for color field"""
+        return self.field["color"]
 
-    def get_outdir(self):
+    def location(self) -> str:
+        """accessor for location field"""
+        return self.field["location"]
+
+    def user(self) -> str:
+        """accessor for user field"""
+        return self.field["user"]
+
+    def found(self) -> str:
+        """accessor for found field"""
+        return self.field["found"]
+
+    def get_type(self) -> str:
+        """accessor for type attribute"""
+        return self.type
+
+    def get_outdir(self) -> Path:
         """accessor for outdir attribute"""
         return self.outdir
+
+    def pdf_basename(self) -> str:
+        """get basename for label PDF file to be generated"""
+        return f"label_{self.field['box']}.pdf"
+
+    def tempdir(self) -> Path:
+        """get temporary directory path"""
+        if self.tempdirpath is None:
+            # pylint: disable=consider-using-with
+            self.tempdirpath = tempfile.mkdtemp(prefix="moving_label_")
+        return self.tempdirpath
 
     def _gen_label_uri(self):
         """generate URI for moving box label QR code"""
 
         # determine box URI text for QR code
-        uri = f"movingbox://{self.user}/{self.box}?room={self.room},color={self.color}"
+        uri = (
+            f"movingbox://{self.field['user']}/{self.field['box']}?room={self.field['room']},"
+            + "color={self.field['color']}"
+        )
         return uri
 
     def _gen_label_qrcode(self, tmpdirpath: Path) -> str:
@@ -116,7 +168,7 @@ class MoveBoxLabel:
 
         # generate QR code in SVG for use in PDF
         errcorlvl = QrCode.Ecc.LOW  # Error correction level
-        qr_svg_file = f"label_{self.box}.svg"
+        qr_svg_file = f"label_{self.field['box']}.svg"
         qr_svg_path = Path(tmpdirpath) / qr_svg_file
         qrcode = QrCode.encode_text(self._gen_label_uri(), errcorlvl)
 
@@ -124,6 +176,10 @@ class MoveBoxLabel:
         with open(qr_svg_path, "wt", encoding="utf-8") as qr_file:
             qr_file.write(to_svg_str(qrcode, border=5))
         return qr_svg_file
+
+
+class MoveBoxLabelPage(MoveBoxLabel):
+    """generate moving box labels with HTML layout for full-page printing"""
 
     def _gen_label_html(self, tmpdirpath: Path, qr_svg_file: Path) -> str:
         """generate HTML in a file in the temporary directory for use in PDF generation"""
@@ -133,18 +189,18 @@ class MoveBoxLabel:
         label_cell = [
             '<table id="label_cell">',
             "<tr>",
-            f"<td><big><b>{self.room}</b></big></td>",
-            f'<td style="text-align: right"><big>Box&nbsp;{self.box}</big></td>',
+            f"<td><big><b>{self.field['room']}</b></big></td>",
+            f'<td style="text-align: right"><big>Box&nbsp;{self.field["box"]}</big></td>',
             "</tr>",
             "<tr>",
-            f'<td style="background: {self.color}">&nbsp;</td>',
+            f'<td style="background: {self.field["color"]}">&nbsp;</td>',
             f'<td><img src="{qr_svg_file}"></td>',
             "</tr>",
             "<tr>",
             '<td colspan=2 style="text-align: center">',
             "Lost &amp; found contact:",
             "<br/>",
-            f"{self.found}",
+            f"{self.field['found']}",
             "</td>",
             "</tr>",
             "<tr>",
@@ -173,26 +229,24 @@ class MoveBoxLabel:
             + label_cell
             + ["</td>", "</tr>", "</table>", "</body>", "</html>"]
         )
-        html_file_path = Path(f"{tmpdirpath}/label_{self.box}.html")
+        html_file_path = Path(f"{tmpdirpath}/label_{self.field['box']}.html")
         with open(html_file_path, "wt", encoding="utf-8") as textfile:
             textfile.write("\n".join(label_html))
         return html_file_path
 
-    def _gen_label(self) -> None:
+    def gen_label2(self) -> None:
         """generate a moving box label file for label object's data"""
 
-        # verify output directory exists
-        if not self.outdir.exists():
-            self.outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
-
         # skip this label if destination PDF exists
-        label_pdf_basename = f"label_{self.box}.pdf"
+        label_pdf_basename = self.pdf_basename()
         if Path(self.outdir / label_pdf_basename).is_file():
-            print(f"skipping {self.box}: label PDF exists at {label_pdf_basename}")
+            print(
+                f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}"
+            )
             return
 
         # allocate temporary directory
-        tmpdirpath = tempfile.mkdtemp(prefix="moving_label_")
+        tmpdirpath = self.tempdir()
 
         # generate QR code in SVG for use in PDF
         qr_svg_file = self._gen_label_qrcode(tmpdirpath)
@@ -204,7 +258,7 @@ class MoveBoxLabel:
         css = CSS(string=BOX_LABEL_STYLESHEET)
 
         # generate PDF
-        label_pdf_file = Path(tmpdirpath + "/" + label_pdf_basename)
+        label_pdf_file = Path(tmpdirpath + "/" + self.pdf_basename())
         doc = HTML(filename=html_file_path)
         doc.write_pdf(
             target=label_pdf_file,
@@ -212,5 +266,33 @@ class MoveBoxLabel:
             attachments=[f"{tmpdirpath}/{qr_svg_file}"],
             optimize_size=("fonts", "images"),
         )
+        move(label_pdf_file, self.outdir)
+        return
+
+
+class MoveBoxLabelBagTag(MoveBoxLabel):
+    """generate moving box labels in bag tag format with SVG layout"""
+
+    def gen_label2(self) -> None:
+        """generate a moving box label file for label object's data"""
+
+        # skip this label if destination PDF exists
+        label_pdf_basename = self.pdf_basename()
+        if Path(self.outdir / label_pdf_basename).is_file():
+            print(
+                f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}"
+            )
+            return
+
+        # allocate temporary directory
+        tmpdirpath = self.tempdir()
+
+        # generate QR code in SVG for use in PDF
+        qr_svg_file = self._gen_label_qrcode(tmpdirpath)
+
+        # generate PDF
+        label_pdf_file = Path(tmpdirpath + "/" + self.pdf_basename())
+        drawing = svg2rlg(self.tempdir() / qr_svg_file)
+        renderPDF.drawToFile(drawing, label_pdf_file)
         move(label_pdf_file, self.outdir)
         return

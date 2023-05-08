@@ -513,6 +513,7 @@ def _gen_arg_subparsers_label(subparsers) -> None:
     # label subparser
     parser_label = subparsers.add_parser("label", help="print label(s) for specified box ids")
     _common_db_file_arg(parser_label)
+    parser_label.add_argument("--type", nargs="?")
     parser_label.add_argument(
         "--outdir",
         dest="out_dir",
