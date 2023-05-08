@@ -151,7 +151,7 @@ class MoveBoxLabel:
         if self.tempdirpath is None:
             # pylint: disable=consider-using-with
             self.tempdirpath = tempfile.mkdtemp(prefix="moving_label_")
-        return self.tempdirpath
+        return Path(self.tempdirpath)
 
     def _gen_label_uri(self):
         """generate URI for moving box label QR code"""
@@ -169,7 +169,7 @@ class MoveBoxLabel:
         # generate QR code in SVG for use in PDF
         errcorlvl = QrCode.Ecc.LOW  # Error correction level
         qr_svg_file = f"label_{self.field['box']}.svg"
-        qr_svg_path = Path(tmpdirpath) / qr_svg_file
+        qr_svg_path = tmpdirpath / qr_svg_file
         qrcode = QrCode.encode_text(self._gen_label_uri(), errcorlvl)
 
         # qrcode.save(f"{tmpdirpath}/{qr_svg_file}")
@@ -291,8 +291,8 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
         qr_svg_file = self._gen_label_qrcode(tmpdirpath)
 
         # generate PDF
-        label_pdf_file = Path(tmpdirpath + "/" + self.pdf_basename())
+        label_pdf_file = tmpdirpath / self.pdf_basename()
         drawing = svg2rlg(self.tempdir() / qr_svg_file)
-        renderPDF.drawToFile(drawing, label_pdf_file)
+        renderPDF.drawToFile(drawing, str(label_pdf_file))
         move(label_pdf_file, self.outdir)
         return
