@@ -3,6 +3,7 @@ label generator code for moveboxtracker
 """
 
 import os
+import sys
 import tempfile
 from shutil import move
 from pathlib import Path
@@ -15,7 +16,7 @@ from weasyprint import HTML, CSS
 # for ReportLab layout and PDF generation
 from reportlab.graphics.shapes import Drawing, Rect, String, Group
 from reportlab.lib.units import inch
-from reportlab.lib.colors import Color as RLColor
+from reportlab.lib.colors import HexColor
 from reportlab.graphics.charts.textlabels import Label
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics import renderPDF
@@ -25,6 +26,7 @@ NAME_TO_LABEL_CLASS = {
     "page": "MoveBoxLabelPage",
     "bagtag": "MoveBoxLabelBagTag",
 }
+DEFAULT_LABEL_TYPE = "page"
 
 # CSS stylesheet for box label PDF generator
 PAGE_SIZE = os.environ["MBT_PAGE_SIZE"] if "MBT_PAGE_SIZE" in os.environ else "Letter"
@@ -73,7 +75,7 @@ class MoveBoxLabel:
 
     def __init__(self, box_data: dict, outdir: Path):
         self.outdir = outdir
-        for key in ["box", "room", "color", "location", "user", "found"]:
+        for key in ["box", "room", "color", "user", "found"]:
             if key not in box_data:
                 raise RuntimeError(f"missing {key} in label parameters")
 
@@ -81,12 +83,13 @@ class MoveBoxLabel:
         self.field = {}
         self.field["box"] = str(box_data["box"]).zfill(4)
         self.field["room"] = str(box_data["room"]).upper()
-        self.field["color"] = Color(box_data["color"]).name.replace(" ", "")
-        self.field["location"] = str(box_data["location"])
+        self.field["color"] = Color(box_data["color"])
         self.field["user"] = str(box_data["user"])
         self.field["found"] = str(box_data["found"])
         if "type" in box_data:
             self.type = str(box_data["type"])
+        else:
+            self.type = DEFAULT_LABEL_TYPE
         self.tempdirpath = None  # lazy initialization: allocated 1st call to tempdir() method
         # setattr(self, key, box_data[key])
 
@@ -95,19 +98,19 @@ class MoveBoxLabel:
         """generate one moving box label file from a dict of the box's data"""
 
         # look up subclass to generate requested label type, default to HTML-layout full-page
-        if "type" in box_data:
+        if "type" not in box_data:
             label_type = box_data["type"]
-            if label_type in NAME_TO_LABEL_CLASS:
-                label_class_name = NAME_TO_LABEL_CLASS[label_type]
-                global_syms = globals()
-                if label_class_name in global_syms:
-                    label_class = global_syms[label_class_name]
-                else:
-                    raise RuntimeError(f"label class {label_class_name} not found")
-            else:
-                raise RuntimeError(f"no label class found to handle {label_type} type")
         else:
-            label_class = MoveBoxLabelPage  # default to HTML-layout full-page label
+            label_type = DEFAULT_LABEL_TYPE
+        if label_type in NAME_TO_LABEL_CLASS:
+            label_class_name = NAME_TO_LABEL_CLASS[label_type]
+            global_syms = globals()
+            if label_class_name in global_syms:
+                label_class = global_syms[label_class_name]
+            else:
+                raise RuntimeError(f"label class {label_class_name} not found")
+        else:
+            raise RuntimeError(f"no label class found to handle {label_type} type")
 
         # verify output directory exists
         if not outdir.exists():
@@ -115,6 +118,7 @@ class MoveBoxLabel:
 
         # generate label using the subclass' gen_label2() method
         label_obj = label_class(box_data, outdir)
+        print("generating label with " + label_obj.attrdump(), file=sys.stderr)
         label_obj.gen_label2()
 
     def box(self) -> str:
@@ -127,15 +131,15 @@ class MoveBoxLabel:
 
     def color(self) -> str:
         """accessor for color field"""
-        return self.field["color"]
+        return self.field["color"].name.replace(" ", "")
 
     def color_rgb(self) -> tuple[float, float, float]:
-        """accessor for color field as RGB colors"""
-        return Color(self.field["color"]).rgb
+        """accessor for color field as RGB tuple"""
+        return self.field["color"].rgb
 
-    def location(self) -> str:
-        """accessor for location field"""
-        return self.field["location"]
+    def color_hex(self) -> str:
+        """accessor for color field as RGB hexadecimal"""
+        return self.field["color"].hex
 
     def user(self) -> str:
         """accessor for user field"""
@@ -152,6 +156,10 @@ class MoveBoxLabel:
     def get_outdir(self) -> Path:
         """accessor for outdir attribute"""
         return self.outdir
+
+    def attrdump(self) -> str:
+        """return string with attribute dump"""
+        return f"{self.field} type={self.type} outdir={self.outdir}"
 
     def pdf_basename(self) -> str:
         """get basename for label PDF file to be generated"""
@@ -170,7 +178,7 @@ class MoveBoxLabel:
         # determine box URI text for QR code
         uri = (
             f"movingbox://{self.field['user']}/{self.field['box']}?room={self.field['room']},"
-            + f"color={self.field['color']}"
+            + "color=" + self.color()
         )
         return uri
 
@@ -204,7 +212,7 @@ class MoveBoxLabelPage(MoveBoxLabel):
             f'<td style="text-align: right"><big>Box&nbsp;{self.field["box"]}</big></td>',
             "</tr>",
             "<tr>",
-            f'<td style="background: {self.field["color"]}">&nbsp;</td>',
+            '<td style="background: ' + self.color_hex() + '">&nbsp;</td>',
             f'<td><img src="{qr_svg_file}"></td>',
             "</tr>",
             "<tr>",
@@ -269,7 +277,7 @@ class MoveBoxLabelPage(MoveBoxLabel):
         css = CSS(string=BOX_LABEL_STYLESHEET)
 
         # generate PDF
-        label_pdf_file = Path(tmpdirpath + "/" + self.pdf_basename())
+        label_pdf_file = Path(tmpdirpath / self.pdf_basename())
         doc = HTML(filename=html_file_path)
         doc.write_pdf(
             target=label_pdf_file,
@@ -310,7 +318,7 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
         found_label.boxAnchor = "n"
         found_label.textAnchor = "middle"
         found_label.fontName = "Helvetica"
-        found_label.fontSize = 12
+        found_label.fontSize = 10
         found_label.setOrigin(1.5 * inch, 0.5 * inch)
         found_label.setText(f"Lost & found contact:\n{self.field['found']}")
 
@@ -319,7 +327,7 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
             String(0, 1.8 * inch, "Box #" + self.box(), fontSize=18, fontName='Helvetica-Bold'),
             String(0, 1.55 * inch, self.room(), fontSize=18, fontName='Helvetica'),
             Rect(0, 0.5 * inch, 1.5 * inch, 1.0 * inch,
-                 fillColor=RLColor(*self.color_rgb()),
+                 fillColor=HexColor(self.color_hex()),
                  strokeWidth=0),
             qrcode_drawing,
             found_label,

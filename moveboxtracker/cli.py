@@ -299,6 +299,8 @@ def _do_label(args: dict) -> ErrStr | None:
     for box_id in _expand_id_list(args["box_id"]):
         # process a single box id from range-expanded list
         box_data = rec_obj.box_label_data(box_id)
+        if "type" in args:
+            box_data["type"] = args["type"]
         MoveBoxLabel.gen_label(box_data, outdir)
     return None
 

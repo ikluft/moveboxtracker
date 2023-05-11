@@ -763,13 +763,13 @@ class MoveDbMovingBox(MoveDbRecord):
         cur = self.mbt_db.conn.cursor()
         cur.row_factory = sqlite3.Row
 
-        # use box id to query for room, location & user data via their foreign keys
+        # use box id to query for room & user data via their foreign keys
         data = {"id": box_id}
         sql_cmd = (
             "SELECT box.id AS box, room.name AS room, room.color AS color, "
-            "location.name AS location, user.name AS user, project.found_contact AS found "
-            "FROM moving_box AS box, room, location, uri_user AS user, move_project AS project "
-            "WHERE box.id == :id AND room.id == box.room AND location.id == box.location "
+            "user.name AS user, project.found_contact AS found "
+            "FROM moving_box AS box, room, uri_user AS user, move_project AS project "
+            "WHERE box.id == :id AND room.id == box.room "
             "AND user.id == box.user AND project.rowid == 1"
         )
         print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
