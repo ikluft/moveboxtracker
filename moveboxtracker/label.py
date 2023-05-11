@@ -8,9 +8,16 @@ from shutil import move
 from pathlib import Path
 from qrcodegen import QrCode
 from colorlookup import Color
+
+# for WeasyPrint HTML/CSS layout and PDF generation
 from weasyprint import HTML, CSS
 
-from svglib.svglib import svg2rlg
+# for ReportLab layout and PDF generation
+from reportlab.graphics.shapes import Drawing, Rect, String, Group
+from reportlab.lib.units import inch
+from reportlab.lib.colors import Color as RLColor
+from reportlab.graphics.charts.textlabels import Label
+from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics import renderPDF
 
 # map label type names to subclasses
@@ -122,6 +129,10 @@ class MoveBoxLabel:
         """accessor for color field"""
         return self.field["color"]
 
+    def color_rgb(self) -> tuple[float, float, float]:
+        """accessor for color field as RGB colors"""
+        return Color(self.field["color"]).rgb
+
     def location(self) -> str:
         """accessor for location field"""
         return self.field["location"]
@@ -159,9 +170,13 @@ class MoveBoxLabel:
         # determine box URI text for QR code
         uri = (
             f"movingbox://{self.field['user']}/{self.field['box']}?room={self.field['room']},"
-            + "color={self.field['color']}"
+            + f"color={self.field['color']}"
         )
         return uri
+
+
+class MoveBoxLabelPage(MoveBoxLabel):
+    """generate moving box labels with HTML layout for full-page printing"""
 
     def _gen_label_qrcode(self, tmpdirpath: Path) -> str:
         """generate QR code in a file in the temporary directory for use in PDF generation"""
@@ -176,10 +191,6 @@ class MoveBoxLabel:
         with open(qr_svg_path, "wt", encoding="utf-8") as qr_file:
             qr_file.write(to_svg_str(qrcode, border=5))
         return qr_svg_file
-
-
-class MoveBoxLabelPage(MoveBoxLabel):
-    """generate moving box labels with HTML layout for full-page printing"""
 
     def _gen_label_html(self, tmpdirpath: Path, qr_svg_file: Path) -> str:
         """generate HTML in a file in the temporary directory for use in PDF generation"""
@@ -287,12 +298,42 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
         # allocate temporary directory
         tmpdirpath = self.tempdir()
 
-        # generate QR code in SVG for use in PDF
-        qr_svg_file = self._gen_label_qrcode(tmpdirpath)
+        # generate QR code
+        qrcode_widget = QrCodeWidget(value=self._gen_label_uri(), barBorder=5,
+                                     barWidth=1.5 * inch, barHeight=1.5 * inch)
+        qrcode_drawing = Drawing(1.5 * inch, 1.5 * inch)
+        qrcode_drawing.add(qrcode_widget)
+        qrcode_drawing.translate(1.5 * inch, 0.5 * inch)
 
-        # generate PDF
+        # generate lost+found text
+        found_label = Label()
+        found_label.boxAnchor = "n"
+        found_label.textAnchor = "middle"
+        found_label.fontName = "Helvetica"
+        found_label.fontSize = 12
+        found_label.setOrigin(1.5 * inch, 0.5 * inch)
+        found_label.setText(f"Lost & found contact:\n{self.field['found']}")
+
+        # generate label graphic
+        tag_group = Group(
+            String(0, 1.8 * inch, "Box #" + self.box(), fontSize=18, fontName='Helvetica-Bold'),
+            String(0, 1.55 * inch, self.room(), fontSize=18, fontName='Helvetica'),
+            Rect(0, 0.5 * inch, 1.5 * inch, 1.0 * inch,
+                 fillColor=RLColor(*self.color_rgb()),
+                 strokeWidth=0),
+            qrcode_drawing,
+            found_label,
+        )
+        two_tag_drawing = Drawing(3 * inch, 4.5 * inch)
+        first_tag = Group(tag_group)
+        first_tag.translate(0, 0)
+        two_tag_drawing.add(first_tag)
+        second_tag = Group(tag_group)
+        second_tag.translate(0, 2.5 * inch)
+        two_tag_drawing.add(second_tag)
+
+        # write PDF file
         label_pdf_file = tmpdirpath / self.pdf_basename()
-        drawing = svg2rlg(self.tempdir() / qr_svg_file)
-        renderPDF.drawToFile(drawing, str(label_pdf_file))
+        renderPDF.drawToFile(two_tag_drawing, str(label_pdf_file))
         move(label_pdf_file, self.outdir)
         return
