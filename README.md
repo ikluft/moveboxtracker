@@ -32,6 +32,7 @@ Tables in the SQLite database:
 * uri_user: name of a user as a namespace for URIs for scanning, who did each scan
 
 Labels are printed with data from a query of the tables move_project, moving_box, room & uri_user.
+There are two label formats: 4-up on a page, or a baggage tag.
 
 Features of mobile app (upcoming):
 * Android app
@@ -39,9 +40,12 @@ Features of mobile app (upcoming):
 * scans a batch of boxes into local SQLite db
 * exports SQLite db for merge into central CLI-managed db
 * maybe future expansion to control central db on Android if others want to help with that
-* no plans for an iOS app unless others want to help with that
 
-![example moving label printout page](doc/label-pdf-example.png "example moving label printout page")
+![example moving label printout page](doc/label-pdf-example.png "example page-style moving label printout")
+
+![example moving label bagtag format](doc/bagtag-labels.png "example baggage tag style moving label")
+
+There are currently no plans for an iOS app unless others want to help develop and maintain it.
 
 ## Command-line usage
 
