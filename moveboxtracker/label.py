@@ -324,12 +324,12 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
             qrcode_drawing,
             found_label,
         )
-        two_tag_drawing = Drawing(3 * inch, 4.5 * inch)
+        two_tag_drawing = Drawing(3 * inch, 4.05 * inch)
         first_tag = Group(tag_group)
         first_tag.translate(0, 0)
         two_tag_drawing.add(first_tag)
         second_tag = Group(tag_group)
-        second_tag.translate(0, 2.5 * inch)
+        second_tag.translate(0, 2.05 * inch)
         two_tag_drawing.add(second_tag)
 
         # write PDF file
