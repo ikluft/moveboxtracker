@@ -98,8 +98,8 @@ class MoveBoxLabel:
         """generate one moving box label file from a dict of the box's data"""
 
         # look up subclass to generate requested label type, default to HTML-layout full-page
-        if "type" not in box_data:
-            label_type = DEFAULT_LABEL_TYPE
+        if "type" not in box_data or box_data["type"] is None:
+            box_data["type"] = DEFAULT_LABEL_TYPE
         label_type = box_data["type"]
         if label_type in NAME_TO_LABEL_CLASS:
             label_class_name = NAME_TO_LABEL_CLASS[label_type]
