@@ -163,6 +163,18 @@ class MoveBoxTrackerDB:
     def __del__(self):
         self.conn.close()
 
+    def display(self, text: str) -> None:
+        """proxy method which calls UI display callback function"""
+        if self.ui_cb is None:
+            raise RuntimeError("attempt to display with uninitialized UI")
+        return self.ui_cb.display(text)
+
+    def error(self, text: str) -> None:
+        """proxy method which calls UI display callback function"""
+        if self.ui_cb is None:
+            raise RuntimeError("attempt to display with uninitialized UI")
+        return self.ui_cb.error(text)
+
     def _init_db(self, data: dict) -> None:
         """initialize database file from SQL schema statements"""
         # check required data fields if UI didn't privide a prompt-callback
@@ -211,7 +223,7 @@ class MoveBoxTrackerDB:
     def db_dump(self) -> None:
         """dump database contents to standard output"""
         for line in self.conn.iterdump():
-            self.ui_cb.display(line)
+            self.display(line)
 
 
 class MoveDbRecord:
@@ -271,13 +283,27 @@ class MoveDbRecord:
             raise RuntimeError(f"MoveDbRecord.table_name(): class {cls.__name__} is not recognized")
         return DB_CLASS_TO_TABLE[cls.__name__]
 
-    def ui_cb(self) -> UICallback:
-        """get UI callback structure"""
-        return self.mbt_db.ui_cb
+    def prompt(self, table: str, field_prompts: dict) -> dict:
+        """proxy method which calls UI prompt callback function"""
+        if self.mbt_db.ui_cb is None:
+            raise RuntimeError("attempt to prompt with uninitialized UI")
+        return self.mbt_db.ui_cb.prompt(table, field_prompts)
+
+    def display(self, text: str) -> None:
+        """proxy method which calls UI display callback function"""
+        if self.mbt_db.ui_cb is None:
+            raise RuntimeError("attempt to display text with uninitialized UI")
+        return self.mbt_db.ui_cb.display(text)
+
+    def error(self, text: str) -> None:
+        """proxy method which calls UI error callback function"""
+        if self.mbt_db.ui_cb is None:
+            raise RuntimeError("attempt to display error with uninitialized UI")
+        return self.mbt_db.ui_cb.error(text)
 
     def _prompt_missing_fields(self, data: dict) -> None:
         """prompt user for missing fields"""
-        if self.ui_cb() is None:
+        if self.mbt_db.ui_cb is None:
             return
         field_prompts = {}
         field_data = vars(self.__class__)["field_data"]
@@ -287,7 +313,7 @@ class MoveDbRecord:
                 if "prompt" in field_data[key]:
                     # use UI-provided callback to prompt the user for the missing data
                     field_prompts[key] = field_data[key]["prompt"]
-        response = self.ui_cb().prompt(table, field_prompts)
+        response = self.prompt(table, field_prompts)
         for key in response.keys():
             data[key] = response[key]
 
@@ -387,7 +413,7 @@ class MoveDbRecord:
             placeholder_list.append(f":{key}")
         placeholder_str = (", ").join(placeholder_list)
         sql_cmd = f"INSERT INTO {table} ({fields_str}) VALUES ({placeholder_str})"
-        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL insert failed")
@@ -404,7 +430,7 @@ class MoveDbRecord:
         if "id" not in data:
             raise RuntimeError(f"read requested on {table} is missing 'id' parameter")
         sql_cmd = f"SELECT * FROM {table} WHERE id == :id"
-        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")
@@ -412,7 +438,7 @@ class MoveDbRecord:
         text_table.set_style(SINGLE_BORDER)
         text_table.left_padding_width = 0
         text_table.right_padding_width = 0
-        self.ui_cb().display(text_table)
+        self.display(text_table)
         self.mbt_db.conn.commit()
         return 1  # if no exceptions raised by now, assume 1 record
 
@@ -435,7 +461,7 @@ class MoveDbRecord:
                 placeholder_list.append(f"{key} = :{key}")
         placeholder_str = (", ").join(placeholder_list)
         sql_cmd = f"UPDATE {table} SET {placeholder_str} WHERE id == :id"
-        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
         if row_count == 0:
@@ -452,7 +478,7 @@ class MoveDbRecord:
         if "id" not in data:
             raise RuntimeError(f"delete requested on {table} is missing 'id' parameter")
         sql_cmd = f"DELETE FROM {table} WHERE id == :id"
-        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
         if row_count == 0:
@@ -466,7 +492,7 @@ class MoveDbRecord:
         cur = self.mbt_db.conn.cursor()
         sql_data = {key: value}
         sql_cmd = f"SELECT id FROM {table} WHERE {key} LIKE :{key}"
-        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {sql_data}")
+        self.display(f"executing SQL [{sql_cmd}] with {sql_data}")
         cur.execute(sql_cmd, sql_data)
         row = cur.fetchone()
         cur.close()
@@ -480,7 +506,7 @@ class MoveDbRecord:
         table = MoveDbMoveProject.table_name()
         cur = self.mbt_db.conn.cursor()
         sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid == 1"
-        self.ui_cb().display(f"executing SQL [{sql_cmd}]")
+        self.display(f"executing SQL [{sql_cmd}]")
         cur.execute(sql_cmd)
         row = cur.fetchone()
         cur.close()
@@ -492,7 +518,7 @@ class MoveDbRecord:
         table = cls.table_name()
         cur = mbt_db.conn.cursor()
         sql_cmd = f"SELECT * FROM {table}"
-        mbt_db.ui_cb.display(f"executing SQL [{sql_cmd}] with {data}")
+        mbt_db.display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             return "SQL read failed"
@@ -500,7 +526,7 @@ class MoveDbRecord:
         text_table.set_style(SINGLE_BORDER)
         text_table.left_padding_width = 0
         text_table.right_padding_width = 0
-        mbt_db.ui_cb.display(text_table)
+        mbt_db.display(text_table)
         mbt_db.conn.commit()
         return None
 
@@ -649,7 +675,7 @@ class MoveDbBatchMove(MoveDbRecord):
             + f"FROM {batch_table} AS batch, {scan_table} AS scan "
             + "WHERE batch.id == :batch AND scan.batch == batch.id AND scan.box == box.id"
         )
-        mbt_db.ui_cb().display(f"executing SQL [{sql_cmd}] with {sql_data}")
+        mbt_db.display(f"executing SQL [{sql_cmd}] with {sql_data}")
         cur.execute(sql_cmd, sql_data)
         count = cur.rowcount
         if count == 0:
@@ -776,7 +802,7 @@ class MoveDbMovingBox(MoveDbRecord):
             "WHERE box.id == :id AND room.id == box.room "
             "AND user.id == box.user AND project.rowid == 1"
         )
-        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")

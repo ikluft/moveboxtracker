@@ -153,9 +153,17 @@ def cli_prompt(table: str, field_prompts: dict) -> dict:
     return result
 
 
-def cli_display(text: str) -> str | None:
+def cli_display(text: str) -> None:
     """callback function which the database layer can use to display on the UI"""
-    print(text, file=sys.stderr)
+    print(text, file=sys.stdout)
+
+
+def cli_error(text: str, **kwargs) -> None:
+    """callback function which the database layer can use to display an error on the UI"""
+    if "exception" in kwargs:
+        print(f"exception {kwargs['exception']}: {text}", file=sys.stderr)
+    else:
+        print(text, file=sys.stderr)
 
 
 def _get_db_file(args: dict) -> Path | None:
@@ -726,7 +734,7 @@ def run():
     top_parser = _gen_arg_parser()
 
     # callback functions for DB to access CLI
-    cli_callback = UICallback(prompt_cb=cli_prompt, display_cb=cli_display)
+    cli_callback = UICallback(prompt_cb=cli_prompt, display_cb=cli_display, error_cb=cli_error)
 
     # parse arguments and run subcommand functions
     args = vars(top_parser.parse_args())
