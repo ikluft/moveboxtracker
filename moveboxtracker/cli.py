@@ -36,6 +36,7 @@ from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 import lib_programname
 from . import __version__
+from .ui_callback import UICallback
 from .db import (
     MoveDbRecord,
     MoveBoxTrackerDB,
@@ -152,6 +153,11 @@ def cli_prompt(table: str, field_prompts: dict) -> dict:
     return result
 
 
+def cli_display(text: str) -> str | None:
+    """callback function which the database layer can use to display on the UI"""
+    print(text, file=sys.stderr)
+
+
 def _get_db_file(args: dict) -> Path | None:
     """get default database file path from environment"""
     if "db_file" in args and args["db_file"] is not None:
@@ -187,13 +193,13 @@ def _expand_id_list(id_list: list) -> list:
     return ids
 
 
-def _do_init(args: dict) -> ErrStr | None:
+def _do_init(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """initialize new moving box database"""
     db_file = _get_db_file(args)
     if db_file is None:
         return "database file not specified"
     data = _args_to_data(args, MoveDbMoveProject.fields())
-    db_obj = MoveBoxTrackerDB(db_file, data, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, data, ui_cb=ui_cb)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "database initialization failed"
     return None
@@ -246,7 +252,7 @@ def _do_list(table_class, db_obj: MoveBoxTrackerDB, **kwargs) -> ErrStr | None:
     return table_class.do_list(db_obj, data)
 
 
-def _do_record_cli(args: dict) -> ErrStr | None:
+def _do_record_cli(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """high-level CLI flow to create or modify a record"""
     table = args["table"]
     table_class = CLI_TO_DB_CLASS[table]
@@ -255,7 +261,7 @@ def _do_record_cli(args: dict) -> ErrStr | None:
     db_file = _get_db_file(args)
     if db_file is None:
         return "database file not specified"
-    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, ui_cb=ui_cb)
     data = _args_to_data(args, table_class.fields())
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
@@ -277,12 +283,12 @@ def _do_record_cli(args: dict) -> ErrStr | None:
     return err
 
 
-def _do_label(args: dict) -> ErrStr | None:
+def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """print label(s) for specified box ids"""
     db_file = _get_db_file(args)
     if db_file is None:
         return "database file not specified"
-    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, ui_cb=ui_cb)
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
@@ -310,17 +316,17 @@ def _do_merge(args: dict) -> ErrStr | None:
     raise NotImplementedError  # TODO
 
 
-def _do_dump(args: dict) -> ErrStr | None:
+def _do_dump(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """dump database contents to standard output"""
     db_file = _get_db_file(args)
     if db_file is None:
         return "database file not specified"
-    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, ui_cb=ui_cb)
     db_obj.db_dump()
     return None
 
 
-def _do_db(args: dict) -> ErrStr | None:
+def _do_db(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """lower-level database access commands"""
 
     # collect arguments
@@ -333,7 +339,7 @@ def _do_db(args: dict) -> ErrStr | None:
     db_file = _get_db_file(args)
     if db_file is None:
         return "database file not specified"
-    db_obj = MoveBoxTrackerDB(db_file, prompt=cli_prompt)
+    db_obj = MoveBoxTrackerDB(db_file, ui_cb=ui_cb)
     data = _args_to_data(args, table_class.fields())
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
@@ -719,13 +725,16 @@ def run():
     # define global parser
     top_parser = _gen_arg_parser()
 
+    # callback functions for DB to access CLI
+    cli_callback = UICallback(prompt_cb=cli_prompt, display_cb=cli_display)
+
     # parse arguments and run subcommand functions
     args = vars(top_parser.parse_args())
     err = None
     if "func" not in args:
         top_parser.error("no command was specified")
     try:
-        err = args["func"](args)
+        err = args["func"](args, ui_cb=cli_callback)
     except Exception as exc:
         exc_class = exc.__class__
         if "verbose" in args and args["verbose"]:

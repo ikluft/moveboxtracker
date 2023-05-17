@@ -2,7 +2,6 @@
 database (model layer) routines for moveboxtracker
 """
 
-import sys
 import re
 from pathlib import Path
 from datetime import timezone, datetime
@@ -14,6 +13,7 @@ from tzlocal import get_localzone
 from prettytable import from_db_cursor, SINGLE_BORDER
 from xdg import BaseDirectory
 from colorlookup import Color
+from .ui_callback import UICallback
 
 # type alias for error strings
 ErrStr = str
@@ -132,7 +132,7 @@ class MoveBoxTrackerDB:
             )
         return datahome_path
 
-    def __init__(self, filename: str, data: dict = None, prompt: callable = None):
+    def __init__(self, filename: str, data: dict = None, ui_cb: UICallback = None):
         # construct database path from relative or absolute path
         if Path(filename).exists() or Path(filename).is_absolute():
             self.filepath = Path(filename)
@@ -140,9 +140,9 @@ class MoveBoxTrackerDB:
             self.filepath = MoveBoxTrackerDB._data_home() / filename
         # print(f"database file: {self.filepath}", file=sys.stderr)
 
-        # save user-input prompt callback function
-        # default should be saved too: None indicates prompt not available
-        self.prompt = prompt
+        # save object with user interface callback functions
+        # default should be saved too: None indicates UI not available
+        self.ui_cb = ui_cb
 
         # create the directory for the database file if it doesn't exist
         db_dir = self.filepath.parent
@@ -166,7 +166,7 @@ class MoveBoxTrackerDB:
     def _init_db(self, data: dict) -> None:
         """initialize database file from SQL schema statements"""
         # check required data fields if UI didn't privide a prompt-callback
-        if self.prompt is None:
+        if self.ui_cb is None:
             if data is None:
                 raise RuntimeError("data for move_project is needed to initialize a new database")
             missing = MoveDbMoveProject.check_missing_fields(data)
@@ -211,7 +211,7 @@ class MoveBoxTrackerDB:
     def db_dump(self) -> None:
         """dump database contents to standard output"""
         for line in self.conn.iterdump():
-            print(line)
+            self.ui_cb.display(line)
 
 
 class MoveDbRecord:
@@ -271,9 +271,13 @@ class MoveDbRecord:
             raise RuntimeError(f"MoveDbRecord.table_name(): class {cls.__name__} is not recognized")
         return DB_CLASS_TO_TABLE[cls.__name__]
 
+    def ui_cb(self) -> UICallback:
+        """get UI callback structure"""
+        return self.mbt_db.ui_cb
+
     def _prompt_missing_fields(self, data: dict) -> None:
         """prompt user for missing fields"""
-        if self.mbt_db.prompt is None:
+        if self.ui_cb() is None:
             return
         field_prompts = {}
         field_data = vars(self.__class__)["field_data"]
@@ -283,7 +287,7 @@ class MoveDbRecord:
                 if "prompt" in field_data[key]:
                     # use UI-provided callback to prompt the user for the missing data
                     field_prompts[key] = field_data[key]["prompt"]
-        response = self.mbt_db.prompt(table, field_prompts)
+        response = self.ui_cb().prompt(table, field_prompts)
         for key in response.keys():
             data[key] = response[key]
 
@@ -383,7 +387,7 @@ class MoveDbRecord:
             placeholder_list.append(f":{key}")
         placeholder_str = (", ").join(placeholder_list)
         sql_cmd = f"INSERT INTO {table} ({fields_str}) VALUES ({placeholder_str})"
-        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL insert failed")
@@ -400,7 +404,7 @@ class MoveDbRecord:
         if "id" not in data:
             raise RuntimeError(f"read requested on {table} is missing 'id' parameter")
         sql_cmd = f"SELECT * FROM {table} WHERE id == :id"
-        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")
@@ -408,7 +412,7 @@ class MoveDbRecord:
         text_table.set_style(SINGLE_BORDER)
         text_table.left_padding_width = 0
         text_table.right_padding_width = 0
-        print(text_table)
+        self.ui_cb().display(text_table)
         self.mbt_db.conn.commit()
         return 1  # if no exceptions raised by now, assume 1 record
 
@@ -431,7 +435,7 @@ class MoveDbRecord:
                 placeholder_list.append(f"{key} = :{key}")
         placeholder_str = (", ").join(placeholder_list)
         sql_cmd = f"UPDATE {table} SET {placeholder_str} WHERE id == :id"
-        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
         if row_count == 0:
@@ -448,7 +452,7 @@ class MoveDbRecord:
         if "id" not in data:
             raise RuntimeError(f"delete requested on {table} is missing 'id' parameter")
         sql_cmd = f"DELETE FROM {table} WHERE id == :id"
-        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
         if row_count == 0:
@@ -462,7 +466,7 @@ class MoveDbRecord:
         cur = self.mbt_db.conn.cursor()
         sql_data = {key: value}
         sql_cmd = f"SELECT id FROM {table} WHERE {key} LIKE :{key}"
-        print(f"executing SQL [{sql_cmd}] with {sql_data}", file=sys.stderr)
+        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {sql_data}")
         cur.execute(sql_cmd, sql_data)
         row = cur.fetchone()
         cur.close()
@@ -476,7 +480,7 @@ class MoveDbRecord:
         table = MoveDbMoveProject.table_name()
         cur = self.mbt_db.conn.cursor()
         sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid == 1"
-        print(f"executing SQL [{sql_cmd}]", file=sys.stderr)
+        self.ui_cb().display(f"executing SQL [{sql_cmd}]")
         cur.execute(sql_cmd)
         row = cur.fetchone()
         cur.close()
@@ -488,7 +492,7 @@ class MoveDbRecord:
         table = cls.table_name()
         cur = mbt_db.conn.cursor()
         sql_cmd = f"SELECT * FROM {table}"
-        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        mbt_db.ui_cb.display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             return "SQL read failed"
@@ -496,7 +500,7 @@ class MoveDbRecord:
         text_table.set_style(SINGLE_BORDER)
         text_table.left_padding_width = 0
         text_table.right_padding_width = 0
-        print(text_table)
+        mbt_db.ui_cb.display(text_table)
         mbt_db.conn.commit()
         return None
 
@@ -645,7 +649,7 @@ class MoveDbBatchMove(MoveDbRecord):
             + f"FROM {batch_table} AS batch, {scan_table} AS scan "
             + "WHERE batch.id == :batch AND scan.batch == batch.id AND scan.box == box.id"
         )
-        print(f"executing SQL [{sql_cmd}] with {sql_data}", file=sys.stderr)
+        mbt_db.ui_cb().display(f"executing SQL [{sql_cmd}] with {sql_data}")
         cur.execute(sql_cmd, sql_data)
         count = cur.rowcount
         if count == 0:
@@ -772,7 +776,7 @@ class MoveDbMovingBox(MoveDbRecord):
             "WHERE box.id == :id AND room.id == box.room "
             "AND user.id == box.user AND project.rowid == 1"
         )
-        print(f"executing SQL [{sql_cmd}] with {data}", file=sys.stderr)
+        self.ui_cb().display(f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")
