@@ -20,10 +20,11 @@ requires-python = ">=3.10"
 dependencies = [
     "colorlookup >= 0.2",
     "weasyprint >= 55, < 58",
-    "qrcode >= 7.0, < 8.0",
+    "qrcodegen >=1.0, <2.0",
     "pyxdg >=0.27, < 2.0",
     "prettytable >=2.3, <4.0",
-    "lib_programname >=2.0, <3.0"
+    "lib_programname >=2.0, <3.0",
+    "tzlocal >=3.0, <6.0",
 ]
 
 [project.urls]
