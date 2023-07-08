@@ -300,8 +300,7 @@ def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
-    # generate label data for each box
-    rec_obj = MoveDbMovingBox(db_obj)
+    # determine output directory location
     if "out_dir" in args and args["out_dir"] is not None:
         # use --out_dir directory if provided via command line
         outdir = Path(args["out_dir"])
@@ -310,14 +309,17 @@ def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
         outdir = db_file.parent / (str(db_file.stem) + "-labels")
         if not outdir.is_dir():
             outdir.mkdir(mode=0o770, exist_ok=True)
+
+    # generate label data for each box
+    label_args = {}
+    if "type" in args:
+        label_args["type"] = args["type"]
     for box_id in _expand_id_list(args["box_id"]):
         # process a single box id from range-expanded list
-        box_data = rec_obj.box_label_data(box_id)
-        if "type" in args:
-            box_data["type"] = args["type"]
-        MoveBoxLabel.gen_label(box_data, outdir)
+        label_obj = MoveBoxLabel.typed_new(box_id, db_obj, outdir, **label_args)
+        label_obj.gen_label()
         if "print" in args and args["print"] is True:
-            MoveBoxLabel.print_label(box_data, outdir)
+            label_obj.print_label()
     return None
 
 

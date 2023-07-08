@@ -5,9 +5,9 @@ label generator code for moveboxtracker
 import os
 import sys
 import tempfile
-import sh
 from shutil import move
 from pathlib import Path
+import sh
 from qrcodegen import QrCode
 from colorlookup import Color
 
@@ -21,6 +21,9 @@ from reportlab.lib.colors import HexColor
 from reportlab.graphics.charts.textlabels import Label
 from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics import renderPDF
+
+# database access
+from .db import MoveBoxTrackerDB, MoveDbMovingBox
 
 # map label type names to subclasses
 NAME_TO_LABEL_CLASS = {
@@ -74,34 +77,49 @@ def to_svg_str(qrcode: QrCode, border: int) -> str:
 class MoveBoxLabel:
     """generate moving box labels"""
 
-    def __init__(self, box_data: dict, outdir: Path):
+    def __init__(
+        self,
+        box_id: int,
+        db_obj: MoveBoxTrackerDB,
+        outdir: Path,
+        label_type: str = DEFAULT_LABEL_TYPE,
+    ):
+
+        # verify output directory exists
         self.outdir = outdir
+        if not self.outdir.is_dir():
+            self.outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
+
+        # retreive fields from database
+        rec_obj = MoveDbMovingBox(db_obj)
+        box_data = rec_obj.box_label_data(box_id)
         for key in ["box", "room", "color", "user", "found"]:
             if key not in box_data:
                 raise RuntimeError(f"missing {key} in label parameters")
 
         # collect parameters
+        self.type = label_type
         self.field = {}
         self.field["box"] = str(box_data["box"]).zfill(4)
         self.field["room"] = str(box_data["room"]).upper()
         self.field["color"] = Color(box_data["color"])
         self.field["user"] = str(box_data["user"])
         self.field["found"] = str(box_data["found"])
-        if "type" in box_data:
-            self.type = str(box_data["type"])
-        else:
-            self.type = DEFAULT_LABEL_TYPE
         self.tempdirpath = None  # lazy initialization: allocated 1st call to tempdir() method
-        # setattr(self, key, box_data[key])
 
     @classmethod
-    def gen_label(cls, box_data: dict, outdir: Path) -> None:
-        """generate one moving box label file from a dict of the box's data"""
-
-        # look up subclass to generate requested label type, default to HTML-layout full-page
-        if "type" not in box_data or box_data["type"] is None:
-            box_data["type"] = DEFAULT_LABEL_TYPE
-        label_type = box_data["type"]
+    def typed_new(
+        cls,
+        box_id: int,
+        db_obj: MoveBoxTrackerDB,
+        outdir: Path,
+        **kwargs,
+    ):
+        """create new MoveBoxLabel object of appropriate subclass based on type parameter"""
+        if "type" in kwargs and kwargs["type"] is not None:
+            label_type = kwargs["type"]
+        else:
+            label_type = DEFAULT_LABEL_TYPE
         if label_type in NAME_TO_LABEL_CLASS:
             label_class_name = NAME_TO_LABEL_CLASS[label_type]
             global_syms = globals()
@@ -111,22 +129,25 @@ class MoveBoxLabel:
                 raise RuntimeError(f"label class {label_class_name} not found")
         else:
             raise RuntimeError(f"no label class found to handle {label_type} type")
+        label_obj = label_class(box_id, db_obj, outdir, label_type)
+        return label_obj
 
-        # verify output directory exists
-        if not outdir.exists():
-            outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
+    def gen_label(self) -> None:
+        """generate one moving box label file from a dict of the box's data"""
 
         # generate label using the subclass' gen_label2() method
-        label_obj = label_class(box_data, outdir)
-        print("generating label with " + label_obj.attrdump(), file=sys.stderr)
-        label_obj.gen_label2()
+        print("generating label with " + self.attrdump(), file=sys.stderr)
+        try:
+            gen_label2_func = getattr(self.__class__, "gen_label2")
+        except AttributeError as exc:
+            exc.add_note(f"class {self.__class__} doesn't implement gen_label2 method")
+            raise
+        gen_label2_func(self)
 
-    @classmethod
-    def print_label(cls, box_data: dict, outdir: Path) -> None:
+    def print_label(self) -> None:
         """send the PDF label to a printer"""
 
-        label_pdf_basename = Path(f"label_{box_data['box']}.pdf")
-        pdf_path = Path(outdir / label_pdf_basename)
+        pdf_path = Path(self.outdir / self.pdf_basename())
         if pdf_path.is_file():
             lpr_cmd = sh.Command("lpr")
             lpr_cmd(pdf_path)
@@ -190,7 +211,8 @@ class MoveBoxLabel:
         # determine box URI text for QR code
         uri = (
             f"movingbox://{self.field['user']}/{self.field['box']}?room={self.field['room']},"
-            + "color=" + self.color()
+            + "color="
+            + self.color()
         )
         return uri
 
@@ -271,9 +293,7 @@ class MoveBoxLabelPage(MoveBoxLabel):
         # skip this label if destination PDF exists
         label_pdf_basename = self.pdf_basename()
         if Path(self.outdir / label_pdf_basename).is_file():
-            print(
-                f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}"
-            )
+            print(f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}")
             return
 
         # allocate temporary directory
@@ -310,17 +330,16 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
         # skip this label if destination PDF exists
         label_pdf_basename = self.pdf_basename()
         if Path(self.outdir / label_pdf_basename).is_file():
-            print(
-                f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}"
-            )
+            print(f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}")
             return
 
         # allocate temporary directory
         tmpdirpath = self.tempdir()
 
         # generate QR code
-        qrcode_widget = QrCodeWidget(value=self._gen_label_uri(), barBorder=5,
-                                     barWidth=1.5 * inch, barHeight=1.5 * inch)
+        qrcode_widget = QrCodeWidget(
+            value=self._gen_label_uri(), barBorder=5, barWidth=1.5 * inch, barHeight=1.5 * inch
+        )
         qrcode_drawing = Drawing(1.5 * inch, 1.5 * inch)
         qrcode_drawing.add(qrcode_widget)
         qrcode_drawing.translate(1.5 * inch, 0.5 * inch)
@@ -336,11 +355,16 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
 
         # generate label graphic
         tag_group = Group(
-            String(0, 1.8 * inch, "Box #" + self.box(), fontSize=18, fontName='Helvetica-Bold'),
-            String(0, 1.55 * inch, self.room(), fontSize=18, fontName='Helvetica'),
-            Rect(0, 0.5 * inch, 1.5 * inch, 1.0 * inch,
-                 fillColor=HexColor(self.color_hex()),
-                 strokeWidth=0),
+            String(0, 1.8 * inch, "Box #" + self.box(), fontSize=18, fontName="Helvetica-Bold"),
+            String(0, 1.55 * inch, self.room(), fontSize=18, fontName="Helvetica"),
+            Rect(
+                0,
+                0.5 * inch,
+                1.5 * inch,
+                1.0 * inch,
+                fillColor=HexColor(self.color_hex()),
+                strokeWidth=0,
+            ),
             qrcode_drawing,
             found_label,
         )
