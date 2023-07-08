@@ -138,7 +138,7 @@ class MoveBoxLabel:
         # skip this label if destination PDF exists
         label_pdf_basename = self.pdf_basename()
         if Path(self.outdir / label_pdf_basename).is_file():
-            print(f"label {self.field['box']} PDF exists at {label_pdf_basename} - not replaced")
+            print(f"label {self.field['box']} PDF exists at {label_pdf_basename}: leaving it as-is")
             return
 
         # generate label using the subclass' gen_label2() method
@@ -153,6 +153,7 @@ class MoveBoxLabel:
     def print_label(self) -> None:
         """send the PDF label to a printer"""
 
+        print("printing label " + self.box())
         pdf_path = Path(self.outdir / self.pdf_basename())
         if pdf_path.is_file():
             lpr_cmd = sh.Command("lpr")
