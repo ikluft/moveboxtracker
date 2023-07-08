@@ -25,6 +25,7 @@ dependencies = [
     "prettytable >=2.3, <4.0",
     "lib_programname >=2.0, <3.0",
     "tzlocal >=3.0, <6.0",
+    "sh >=2.0, <3.0",
 ]
 
 [project.urls]

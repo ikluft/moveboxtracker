@@ -5,6 +5,7 @@ label generator code for moveboxtracker
 import os
 import sys
 import tempfile
+import sh
 from shutil import move
 from pathlib import Path
 from qrcodegen import QrCode
@@ -119,6 +120,18 @@ class MoveBoxLabel:
         label_obj = label_class(box_data, outdir)
         print("generating label with " + label_obj.attrdump(), file=sys.stderr)
         label_obj.gen_label2()
+
+    @classmethod
+    def print_label(cls, box_data: dict, outdir: Path) -> None:
+        """send the PDF label to a printer"""
+
+        label_pdf_basename = Path(f"label_{box_data['box']}.pdf")
+        pdf_path = Path(outdir / label_pdf_basename)
+        if pdf_path.is_file():
+            lpr_cmd = sh.Command("lpr")
+            lpr_cmd(pdf_path)
+        else:
+            raise RuntimeError(f"PDF file {pdf_path} not found")
 
     def box(self) -> str:
         """accessor for box field"""

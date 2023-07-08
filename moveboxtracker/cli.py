@@ -292,7 +292,7 @@ def _do_record_cli(args: dict, ui_cb: UICallback) -> ErrStr | None:
 
 
 def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
-    """print label(s) for specified box ids"""
+    """generate label(s) for specified box ids"""
     db_file = _get_db_file(args)
     if db_file is None:
         return "database file not specified"
@@ -300,7 +300,7 @@ def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
-    # print label data for each box
+    # generate label data for each box
     rec_obj = MoveDbMovingBox(db_obj)
     if "out_dir" in args and args["out_dir"] is not None:
         # use --out_dir directory if provided via command line
@@ -316,6 +316,8 @@ def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
         if "type" in args:
             box_data["type"] = args["type"]
         MoveBoxLabel.gen_label(box_data, outdir)
+        if "print" in args and args["print"] is True:
+            MoveBoxLabel.print_label(box_data, outdir)
     return None
 
 
@@ -530,6 +532,7 @@ def _gen_arg_subparsers_label(subparsers) -> None:
     parser_label = subparsers.add_parser("label", help="print label(s) for specified box ids")
     _common_db_file_arg(parser_label)
     parser_label.add_argument("--type", nargs="?")
+    parser_label.add_argument("--print", action="store_true")
     parser_label.add_argument(
         "--outdir",
         dest="out_dir",
