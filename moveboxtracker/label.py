@@ -135,6 +135,12 @@ class MoveBoxLabel:
     def gen_label(self) -> None:
         """generate one moving box label file from a dict of the box's data"""
 
+        # skip this label if destination PDF exists
+        label_pdf_basename = self.pdf_basename()
+        if Path(self.outdir / label_pdf_basename).is_file():
+            print(f"label {self.field['box']} PDF exists at {label_pdf_basename} - not replaced")
+            return
+
         # generate label using the subclass' gen_label2() method
         print("generating label with " + self.attrdump(), file=sys.stderr)
         try:
@@ -290,12 +296,6 @@ class MoveBoxLabelPage(MoveBoxLabel):
     def gen_label2(self) -> None:
         """generate a moving box label file for label object's data"""
 
-        # skip this label if destination PDF exists
-        label_pdf_basename = self.pdf_basename()
-        if Path(self.outdir / label_pdf_basename).is_file():
-            print(f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}")
-            return
-
         # allocate temporary directory
         tmpdirpath = self.tempdir()
 
@@ -318,7 +318,6 @@ class MoveBoxLabelPage(MoveBoxLabel):
             optimize_size=("fonts", "images"),
         )
         move(label_pdf_file, self.outdir)
-        return
 
 
 class MoveBoxLabelBagTag(MoveBoxLabel):
@@ -326,12 +325,6 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
 
     def gen_label2(self) -> None:
         """generate a moving box label file for label object's data"""
-
-        # skip this label if destination PDF exists
-        label_pdf_basename = self.pdf_basename()
-        if Path(self.outdir / label_pdf_basename).is_file():
-            print(f"skipping {self.field['box']}: label PDF exists at {label_pdf_basename}")
-            return
 
         # allocate temporary directory
         tmpdirpath = self.tempdir()
@@ -380,4 +373,3 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
         label_pdf_file = tmpdirpath / self.pdf_basename()
         renderPDF.drawToFile(two_tag_drawing, str(label_pdf_file))
         move(label_pdf_file, self.outdir)
-        return
