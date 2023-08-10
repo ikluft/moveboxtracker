@@ -10,7 +10,6 @@ import mimetypes
 import sqlite3
 import dateutil.parser
 from tzlocal import get_localzone
-from prettytable import from_db_cursor, SINGLE_BORDER
 from xdg import BaseDirectory
 from colorlookup import Color
 from .ui_callback import UICallback
@@ -163,11 +162,13 @@ class MoveBoxTrackerDB:
     def __del__(self):
         self.conn.close()
 
-    def display(self, text: str) -> None:
+    def display(self, **kwargs) -> None:
         """proxy method which calls UI display callback function"""
         if self.ui_cb is None:
             raise RuntimeError("attempt to display with uninitialized UI")
-        return self.ui_cb.display(text)
+        if "text" not in kwargs and "data" not in kwargs:
+            raise RuntimeError("missing text or data parameters for display")
+        return self.ui_cb.display(**kwargs)
 
     def error(self, text: str) -> None:
         """proxy method which calls UI display callback function"""
@@ -223,7 +224,7 @@ class MoveBoxTrackerDB:
     def db_dump(self) -> None:
         """dump database contents to standard output"""
         for line in self.conn.iterdump():
-            self.display(line)
+            self.display(text=line)
 
 
 class MoveDbRecord:
@@ -289,11 +290,13 @@ class MoveDbRecord:
             raise RuntimeError("attempt to prompt with uninitialized UI")
         return self.mbt_db.ui_cb.prompt(table, field_prompts)
 
-    def display(self, text: str) -> None:
+    def display(self, **kwargs) -> None:
         """proxy method which calls UI display callback function"""
         if self.mbt_db.ui_cb is None:
             raise RuntimeError("attempt to display text with uninitialized UI")
-        return self.mbt_db.ui_cb.display(text)
+        if "text" not in kwargs and "data" not in kwargs:
+            raise RuntimeError("missing text or data parameters for display")
+        return self.mbt_db.ui_cb.display(**kwargs)
 
     def error(self, text: str) -> None:
         """proxy method which calls UI error callback function"""
@@ -413,7 +416,7 @@ class MoveDbRecord:
             placeholder_list.append(f":{key}")
         placeholder_str = (", ").join(placeholder_list)
         sql_cmd = f"INSERT INTO {table} ({fields_str}) VALUES ({placeholder_str})"
-        self.display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(text=f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL insert failed")
@@ -430,15 +433,12 @@ class MoveDbRecord:
         if "id" not in data:
             raise RuntimeError(f"read requested on {table} is missing 'id' parameter")
         sql_cmd = f"SELECT * FROM {table} WHERE id == :id"
-        self.display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(text=f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")
-        text_table = from_db_cursor(cur)
-        text_table.set_style(SINGLE_BORDER)
-        text_table.left_padding_width = 0
-        text_table.right_padding_width = 0
-        self.display(text_table)
+        data_table = cur.fetchall()
+        self.display(data=data_table)
         self.mbt_db.conn.commit()
         return 1  # if no exceptions raised by now, assume 1 record
 
@@ -461,7 +461,7 @@ class MoveDbRecord:
                 placeholder_list.append(f"{key} = :{key}")
         placeholder_str = (", ").join(placeholder_list)
         sql_cmd = f"UPDATE {table} SET {placeholder_str} WHERE id == :id"
-        self.display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(text=f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
         if row_count == 0:
@@ -478,7 +478,7 @@ class MoveDbRecord:
         if "id" not in data:
             raise RuntimeError(f"delete requested on {table} is missing 'id' parameter")
         sql_cmd = f"DELETE FROM {table} WHERE id == :id"
-        self.display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(text=f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         row_count = cur.rowcount
         if row_count == 0:
@@ -492,7 +492,7 @@ class MoveDbRecord:
         cur = self.mbt_db.conn.cursor()
         sql_data = {key: value}
         sql_cmd = f"SELECT id FROM {table} WHERE {key} LIKE :{key}"
-        self.display(f"executing SQL [{sql_cmd}] with {sql_data}")
+        self.display(text=f"executing SQL [{sql_cmd}] with {sql_data}")
         cur.execute(sql_cmd, sql_data)
         row = cur.fetchone()
         cur.close()
@@ -506,7 +506,7 @@ class MoveDbRecord:
         table = MoveDbMoveProject.table_name()
         cur = self.mbt_db.conn.cursor()
         sql_cmd = f"SELECT primary_user FROM {table} WHERE rowid == 1"
-        self.display(f"executing SQL [{sql_cmd}]")
+        self.display(text=f"executing SQL [{sql_cmd}]")
         cur.execute(sql_cmd)
         row = cur.fetchone()
         cur.close()
@@ -518,15 +518,12 @@ class MoveDbRecord:
         table = cls.table_name()
         cur = mbt_db.conn.cursor()
         sql_cmd = f"SELECT * FROM {table}"
-        mbt_db.display(f"executing SQL [{sql_cmd}] with {data}")
+        mbt_db.display(text=f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             return "SQL read failed"
-        text_table = from_db_cursor(cur)
-        text_table.set_style(SINGLE_BORDER)
-        text_table.left_padding_width = 0
-        text_table.right_padding_width = 0
-        mbt_db.display(text_table)
+        data_table = cur.fetchall()
+        mbt_db.display(data=data_table)
         mbt_db.conn.commit()
         return None
 
@@ -675,7 +672,7 @@ class MoveDbBatchMove(MoveDbRecord):
             + f"FROM {batch_table} AS batch, {scan_table} AS scan "
             + "WHERE batch.id == :batch AND scan.batch == batch.id AND scan.box == box.id"
         )
-        mbt_db.display(f"executing SQL [{sql_cmd}] with {sql_data}")
+        mbt_db.display(text=f"executing SQL [{sql_cmd}] with {sql_data}")
         cur.execute(sql_cmd, sql_data)
         count = cur.rowcount
         if count == 0:
@@ -802,7 +799,7 @@ class MoveDbMovingBox(MoveDbRecord):
             "WHERE box.id == :id AND room.id == box.room "
             "AND user.id == box.user AND project.rowid == 1"
         )
-        self.display(f"executing SQL [{sql_cmd}] with {data}")
+        self.display(text=f"executing SQL [{sql_cmd}] with {data}")
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")
