@@ -35,6 +35,7 @@ import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 import lib_programname
+from prettytable import SINGLE_BORDER
 from . import __version__
 from .ui_callback import UICallback
 from .db import (
@@ -153,9 +154,16 @@ def cli_prompt(table: str, field_prompts: dict) -> dict:
     return result
 
 
-def cli_display(text: str) -> None:
+def cli_display(**kwargs) -> None:
     """callback function which the database layer can use to display on the UI"""
-    print(text, file=sys.stdout)
+    if "text" in kwargs:
+        print(kwargs["text"], file=sys.stdout)
+    elif "data" in kwargs:
+        text_table = kwargs["data"]
+        text_table.set_style(SINGLE_BORDER)
+        text_table.left_padding_width = 0
+        text_table.right_padding_width = 0
+        print(text_table)
 
 
 def cli_error(text: str, **kwargs) -> None:
