@@ -35,9 +35,9 @@ import argparse
 from importlib.metadata import version, PackageNotFoundError
 from pathlib import Path
 import lib_programname
-from prettytable import SINGLE_BORDER
+from prettytable import PrettyTable, SINGLE_BORDER
 from . import __version__
-from .ui_callback import UICallback
+from .ui_callback import UICallback, UIDataTable
 from .db import (
     MoveDbRecord,
     MoveBoxTrackerDB,
@@ -159,7 +159,12 @@ def cli_display(**kwargs) -> None:
     if "text" in kwargs:
         print(kwargs["text"], file=sys.stdout)
     elif "data" in kwargs:
-        text_table = kwargs["data"]
+        # display tabular data with PrettyTable
+        if not isinstance(kwargs["data"], UIDataTable):
+            raise RuntimeError("internal error: display data parameter is not a UIDataTable")
+        text_table = PrettyTable()
+        text_table.field_names = kwargs["data"].get_fields()
+        text_table.add_rows(kwargs["data"].get_rows())
         text_table.set_style(SINGLE_BORDER)
         text_table.left_padding_width = 0
         text_table.right_padding_width = 0

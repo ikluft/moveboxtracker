@@ -3,6 +3,36 @@ user interface callback structure for moveboxtracker
 """
 
 
+class UIDataTable:
+    """object to pass tabular data for display via UI callbacks"""
+
+    def __init__(self, fields: list, rows: list):
+        # get field names from list formatted from sqlite/DB-API Cursor.description()
+        if not isinstance(fields, tuple) and not isinstance(fields, list):
+            raise RuntimeError("UIDataTable: 'fields' must be list/tuple, got " + str(type(fields)))
+        self.fields = []
+        for entry in fields:
+            if isinstance(entry, tuple):
+                self.fields.append(entry[0])
+            elif isinstance(entry, str):
+                self.fields.append(entry)
+            else:
+                raise RuntimeError("unexpected parameter type for field entry: ", type(entry))
+
+        # accept rows as list from sqlite/DB-API cur.fetchall()
+        if not isinstance(rows, list):
+            raise RuntimeError("UIDataTable: 'rows' must be a list, got " + str(type(rows)))
+        self.rows = rows
+
+    def get_fields(self) -> list:
+        """read accessor for list of field names"""
+        return self.fields
+
+    def get_rows(self) -> list:
+        """read accessor for list of row data"""
+        return self.rows
+
+
 class UICallback:
     """user interface callback structure for moveboxtracker"""
 
@@ -31,12 +61,12 @@ class UICallback:
             result = None
         return result
 
-    def display(self, text: str) -> None:
-        """callback function which the database layer can use to display text"""
+    def display(self, **kwargs) -> None:
+        """callback function which the database layer can use to display text or data tables"""
         try:
-            result = self.display_cb(text)
+            result = self.display_cb(**kwargs)
         except Exception as e_info:  # pylint: disable="broad-except"
-            self.error(f"display{text} failed", exception=e_info)
+            self.error(f"display{kwargs} failed", exception=e_info)
             result = None
         return result
 

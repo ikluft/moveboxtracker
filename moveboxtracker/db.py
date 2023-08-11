@@ -12,7 +12,7 @@ import dateutil.parser
 from tzlocal import get_localzone
 from xdg import BaseDirectory
 from colorlookup import Color
-from .ui_callback import UICallback
+from .ui_callback import UICallback, UIDataTable
 
 # type alias for error strings
 ErrStr = str
@@ -168,6 +168,8 @@ class MoveBoxTrackerDB:
             raise RuntimeError("attempt to display with uninitialized UI")
         if "text" not in kwargs and "data" not in kwargs:
             raise RuntimeError("missing text or data parameters for display")
+        if "text" in kwargs and "data" in kwargs:
+            raise RuntimeError("display requires just one of text or data parameters, not both")
         return self.ui_cb.display(**kwargs)
 
     def error(self, text: str) -> None:
@@ -296,6 +298,8 @@ class MoveDbRecord:
             raise RuntimeError("attempt to display text with uninitialized UI")
         if "text" not in kwargs and "data" not in kwargs:
             raise RuntimeError("missing text or data parameters for display")
+        if "text" in kwargs and "data" in kwargs:
+            raise RuntimeError("display requires just one of text or data parameters, not both")
         return self.mbt_db.ui_cb.display(**kwargs)
 
     def error(self, text: str) -> None:
@@ -437,7 +441,7 @@ class MoveDbRecord:
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             raise RuntimeError("SQL read failed")
-        data_table = cur.fetchall()
+        data_table = UIDataTable(fields=cur.description, rows=cur.fetchall())
         self.display(data=data_table)
         self.mbt_db.conn.commit()
         return 1  # if no exceptions raised by now, assume 1 record
@@ -522,7 +526,7 @@ class MoveDbRecord:
         cur.execute(sql_cmd, data)
         if cur.rowcount == 0:
             return "SQL read failed"
-        data_table = cur.fetchall()
+        data_table = UIDataTable(fields=cur.description, rows=cur.fetchall())
         mbt_db.display(data=data_table)
         mbt_db.conn.commit()
         return None
