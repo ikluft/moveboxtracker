@@ -31,6 +31,8 @@ Tables in the SQLite database:
 * room: name of origin/destination room
 * uri_user: name of a user as a namespace for URIs for scanning, who did each scan
 
+More about the database tables are in the [db](db) directory.
+
 Labels are printed with data from a query of the tables move_project, moving_box, room & uri_user.
 There are two label formats: 4-up on a page, or a baggage tag.
 
