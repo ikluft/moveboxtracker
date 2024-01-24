@@ -7,6 +7,7 @@ operations
     init [--key=value ...]  initialize new database
     label box_id ...        print label(s) for specified box ids, start-end ranges accepted
     merge|ingest db_file    merge in an external SQLite database file, from another device
+    destsign room_name      print a sign for what boxes to unload in a room
     db                      perform database operations
 
 database operations (subcommands of db subcommand)
