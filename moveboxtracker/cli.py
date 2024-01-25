@@ -342,6 +342,11 @@ def _do_merge(args: dict) -> ErrStr | None:
     raise NotImplementedError  # TODO
 
 
+def _do_destsign(args: dict) -> ErrStr | None:
+    """print destination room sign to direct helpers unloading truck"""
+    raise NotImplementedError  # TODO
+
+
 def _do_dump(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """dump database contents to standard output"""
     db_file = _get_db_file(args)
@@ -570,6 +575,15 @@ def _gen_arg_subparsers_merge(subparsers) -> None:
     parser_merge.set_defaults(func=_do_merge)
 
 
+def _gen_arg_subparsers_destsign(subparsers) -> None:
+    # print destination room sign for unloading truck
+    parser_destsign = subparsers.add_parser(
+        "destsign", help="print destination room sign to direct helpers unloading truck"
+    )
+    parser_destsign.add_argument("--room", nargs="?")
+    parser_destsign.set_defaults(func=_do_destsign)
+
+
 def _gen_arg_subparsers_dump(subparsers) -> None:
     # dump subparser
     parser_dump = subparsers.add_parser("dump", help="dump database contents to standard output")
@@ -710,6 +724,9 @@ def _gen_arg_subparsers(top_parser) -> None:
 
     # merge subparser
     _gen_arg_subparsers_merge(subparsers)
+
+    # print destination room signs
+    _gen_arg_subparsers_destsign(subparsers)
 
     # dump subparser
     _gen_arg_subparsers_dump(subparsers)
