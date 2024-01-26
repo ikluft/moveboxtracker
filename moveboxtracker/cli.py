@@ -580,6 +580,14 @@ def _gen_arg_subparsers_destsign(subparsers) -> None:
     parser_destsign = subparsers.add_parser(
         "destsign", help="print destination room sign to direct helpers unloading truck"
     )
+    parser_destsign.add_argument("--print", action="store_true")
+    parser_destsign.add_argument(
+        "--outdir",
+        dest="out_dir",
+        action="store",
+        metavar="LABELDIR",
+        help="directory to place output PDF file(s), default: xxx-labels in same dir as xxx.db",
+    )
     parser_destsign.add_argument("--room", nargs="?")
     parser_destsign.set_defaults(func=_do_destsign)
 
