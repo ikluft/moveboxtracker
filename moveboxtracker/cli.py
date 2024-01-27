@@ -305,6 +305,20 @@ def _do_record_cli(args: dict, ui_cb: UICallback) -> ErrStr | None:
     return err
 
 
+def _get_out_dir(args: dict) -> Path:
+    """determine output directory location"""
+    db_file = _get_db_file(args)
+    if "out_dir" in args and args["out_dir"] is not None:
+        # use --out_dir directory if provided via command line
+        outdir = Path(args["out_dir"])
+    else:
+        # default labels directory is xxx-labels/ next to xxx.db from db_file
+        outdir = db_file.parent / (str(db_file.stem) + "-labels")
+        if not outdir.is_dir():
+            outdir.mkdir(mode=0o770, exist_ok=True)
+    return outdir
+
+
 def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """generate label(s) for specified box ids"""
     db_file = _get_db_file(args)
@@ -315,14 +329,7 @@ def _do_label(args: dict, ui_cb: UICallback) -> ErrStr | None:
         return "failed to open database"
 
     # determine output directory location
-    if "out_dir" in args and args["out_dir"] is not None:
-        # use --out_dir directory if provided via command line
-        outdir = Path(args["out_dir"])
-    else:
-        # default labels directory is xxx-labels/ next to xxx.db from db_file
-        outdir = db_file.parent / (str(db_file.stem) + "-labels")
-        if not outdir.is_dir():
-            outdir.mkdir(mode=0o770, exist_ok=True)
+    outdir = _get_out_dir(args)
 
     # generate label data for each box
     label_args = {}
@@ -342,9 +349,23 @@ def _do_merge(args: dict) -> ErrStr | None:
     raise NotImplementedError  # TODO
 
 
-def _do_destsign(args: dict) -> ErrStr | None:
+def _do_destsign(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """print destination room sign to direct helpers unloading truck"""
-    raise NotImplementedError  # TODO
+    db_file = _get_db_file(args)
+    if db_file is None:
+        return "database file not specified"
+    db_obj = MoveBoxTrackerDB(db_file, ui_cb=ui_cb)
+    if not isinstance(db_obj, MoveBoxTrackerDB):
+        return "failed to open database"
+
+    # determine output directory location
+    outdir = _get_out_dir(args)
+
+    # generate destination signs for each specified room (or * for all)
+
+    # TODO
+
+    return None
 
 
 def _do_dump(args: dict, ui_cb: UICallback) -> ErrStr | None:
