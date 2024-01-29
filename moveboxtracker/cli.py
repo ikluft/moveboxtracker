@@ -215,6 +215,35 @@ def _expand_id_list(id_list: list) -> list:
     return ids
 
 
+def _expand_room_list(id_list: list) -> list:
+    """expand list of strings with room names, record ids or id ranges into list of integer ids"""
+    ids = []
+    for room_param in id_list:
+        # regular expression check for start-end range of room ids
+        match = re.fullmatch(r"^(\d+)-(\d+)$", str(room_param))
+        if match:
+            # process start-end range of room ids
+            start, end = match.groups()
+            for room_num in range(int(start), int(end) + 1):  # +1 so last item in range is included
+                ids.append(room_num)
+            continue
+
+        # regular expression check for simple integer
+        match = re.fullmatch(r"^(\d+)$", str(room_param))
+        if match:
+            # process a single room id
+            id_match = match.group(1)
+            ids.append(int(id_match))
+            continue
+
+        # search for room by name
+        # TODO
+
+        # unrecognized string
+        warnings.warn(f"skipped unrecognized room name/id/range {room_param}")
+    return ids
+
+
 def _do_init(args: dict, ui_cb: UICallback) -> ErrStr | None:
     """initialize new moving box database"""
     db_file = _get_db_file(args)
