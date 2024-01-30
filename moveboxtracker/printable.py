@@ -1,5 +1,5 @@
 """
-label generator code for moveboxtracker
+printable: label & sign generator code for moveboxtracker
 """
 
 import os
@@ -23,7 +23,7 @@ from reportlab.graphics.barcode.qr import QrCodeWidget
 from reportlab.graphics import renderPDF
 
 # database access
-from .db import MoveBoxTrackerDB, MoveDbMovingBox
+from .db import MoveBoxTrackerDB, MoveDbMovingBox, MoveDbRoom
 
 # map label type names to subclasses
 NAME_TO_LABEL_CLASS = {
@@ -74,7 +74,35 @@ def to_svg_str(qrcode: QrCode, border: int) -> str:
         """
 
 
-class MoveBoxLabel:
+class MoveBoxPrintable:
+    """base class for printables"""
+
+    def __init__(
+        self,
+        outdir: Path,
+    ):
+        # initialize common fields
+        self.tempdirpath = None  # lazy initialization: allocated 1st call to tempdir() method
+        self.field = {}
+
+        # verify output directory exists
+        self.outdir = outdir
+        if not self.outdir.is_dir():
+            self.outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
+
+    def tempdir(self) -> Path:
+        """get temporary directory path"""
+        if self.tempdirpath is None:
+            # pylint: disable=consider-using-with
+            self.tempdirpath = tempfile.mkdtemp(prefix="moving_label_")
+        return Path(self.tempdirpath)
+
+    def get_outdir(self) -> Path:
+        """accessor for outdir attribute"""
+        return self.outdir
+
+
+class MoveBoxLabel(MoveBoxPrintable):
     """generate moving box labels"""
 
     def __init__(
@@ -84,11 +112,7 @@ class MoveBoxLabel:
         outdir: Path,
         label_type: str = DEFAULT_LABEL_TYPE,
     ):
-
-        # verify output directory exists
-        self.outdir = outdir
-        if not self.outdir.is_dir():
-            self.outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
+        super().__init__(outdir)
 
         # retreive fields from database
         rec_obj = MoveDbMovingBox(db_obj)
@@ -99,13 +123,11 @@ class MoveBoxLabel:
 
         # collect parameters
         self.type = label_type
-        self.field = {}
         self.field["box"] = str(box_data["box"]).zfill(4)
         self.field["room"] = str(box_data["room"]).upper()
         self.field["color"] = Color(box_data["color"])
         self.field["user"] = str(box_data["user"])
         self.field["found"] = str(box_data["found"])
-        self.tempdirpath = None  # lazy initialization: allocated 1st call to tempdir() method
 
     @classmethod
     def typed_new(
@@ -193,10 +215,6 @@ class MoveBoxLabel:
         """accessor for type attribute"""
         return self.type
 
-    def get_outdir(self) -> Path:
-        """accessor for outdir attribute"""
-        return self.outdir
-
     def attrdump(self) -> str:
         """return string with attribute dump"""
         return f"{self.field} type={self.type} outdir={self.outdir}"
@@ -204,13 +222,6 @@ class MoveBoxLabel:
     def pdf_basename(self) -> str:
         """get basename for label PDF file to be generated"""
         return f"label_{self.field['box']}.pdf"
-
-    def tempdir(self) -> Path:
-        """get temporary directory path"""
-        if self.tempdirpath is None:
-            # pylint: disable=consider-using-with
-            self.tempdirpath = tempfile.mkdtemp(prefix="moving_label_")
-        return Path(self.tempdirpath)
 
     def _gen_label_uri(self):
         """generate URI for moving box label QR code"""
@@ -374,3 +385,55 @@ class MoveBoxLabelBagTag(MoveBoxLabel):
         label_pdf_file = tmpdirpath / self.pdf_basename()
         renderPDF.drawToFile(two_tag_drawing, str(label_pdf_file))
         move(label_pdf_file, self.outdir)
+
+
+class MoveBoxDestSign(MoveBoxPrintable):
+    """generate room destination signs"""
+
+    def __init__(
+        self,
+        room_id: int,
+        db_obj: MoveBoxTrackerDB,
+        outdir: Path,
+    ):
+        super().__init__(outdir)
+
+        # retreive fields from database
+        rec_obj = MoveDbRoom(db_obj)
+        room_data = rec_obj.dest_sign_data(room_id)
+        for key in ["room", "name", "title"]:
+            if key not in room_data:
+                raise RuntimeError(f"missing {key} in label parameters")
+
+        # collect parameters
+        self.field["room"] = str(room_data["room"]).upper()
+        self.field["color"] = Color(room_data["color"])
+        self.field["title"] = Color(room_data["title"])
+
+    def gen_destsign(self) -> None:
+        """generate one rom destination sign file from the room's data"""
+        # TODO
+
+    def print_destsign(self) -> None:
+        """send the PDF label to a printer"""
+        # TODO
+
+    def pdf_basename(self) -> str:
+        """get basename for label PDF file to be generated"""
+        return f"label_{self.field['box']}.pdf"
+
+    def room(self) -> str:
+        """accessor for room field"""
+        return self.field["room"]
+
+    def color(self) -> str:
+        """accessor for color field"""
+        return self.field["color"].name.replace(" ", "")
+
+    def color_rgb(self) -> tuple[float, float, float]:
+        """accessor for color field as RGB tuple"""
+        return self.field["color"].rgb
+
+    def color_hex(self) -> str:
+        """accessor for color field as RGB hexadecimal"""
+        return self.field["color"].hex

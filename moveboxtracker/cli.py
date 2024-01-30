@@ -52,7 +52,7 @@ from .db import (
     MoveDbBoxScan,
     MoveDbURIUser,
 )
-from .label import MoveBoxLabel
+from .printable import MoveBoxLabel, MoveBoxDestSign
 
 # manage table names used by CLI and by database classes
 # Shorter names are preferred for a CLI. Descriptive names are preferred for an SQL schema.
@@ -393,7 +393,7 @@ def _do_destsign(args: dict, ui_cb: UICallback) -> ErrStr | None:
     # generate destination signs for each specified room (or * for all)
     for room in _expand_room_list(args["rooms"]):
         # process a single room name/id from expanded list
-        destsign_obj = MoveBoxDestSign.typed_new(room, db_obj, outdir)
+        destsign_obj = MoveBoxDestSign(room, db_obj, outdir)
         destsign_obj.gen_destsign()
         if "print" in args and args["print"] is True:
             destsign_obj.print_label()

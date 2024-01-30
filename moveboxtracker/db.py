@@ -718,6 +718,39 @@ class MoveDbRoom(MoveDbRecord):
             room_id = room_db.db_create(newrec_data)
         return room_id
 
+    def dest_sign_data(self, room_id: int) -> dict:
+        """return a dict of room data for generating destination sign"""
+
+        # make sure we have a room id
+        table = self.__class__.table_name()
+        if room_id is None:
+            raise RuntimeError(f"room label data request on {table} is missing 'id' parameter")
+
+        # set up database connection
+        cur = self.mbt_db.conn.cursor()
+        cur.row_factory = sqlite3.Row
+
+        # use room id to query for room & user data via their foreign keys
+        data = {"id": room_id}
+        sql_cmd = (
+            "SELECT room.id AS room, room.name AS name, room.color AS color, "
+            "project.title AS title "
+            "FROM room, move_project AS project "
+            "WHERE room.id == :id AND project.rowid == 1"
+        )
+        self.display(text=f"executing SQL [{sql_cmd}] with {data}")
+        cur.execute(sql_cmd, data)
+        if cur.rowcount == 0:
+            raise RuntimeError("SQL read failed")
+        row = cur.fetchone()
+
+        # copy results to a dict and return it
+        room_data = {}
+        for key in row.keys():
+            room_data[key] = row[key]
+        cur.close()
+        return room_data
+
 
 class MoveDbURIUser(MoveDbRecord):
     """class to handle uri_user records"""
