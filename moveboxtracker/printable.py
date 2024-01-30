@@ -91,6 +91,16 @@ class MoveBoxPrintable:
         if not self.outdir.is_dir():
             self.outdir.mkdir(mode=0o770, parents=True, exist_ok=True)
 
+    # abstract methods must be defined by subclasses
+    @abstractmethod
+    def pdf_basename(self) -> str:
+        """get basename for label PDF file to be generated"""
+
+    @abstractmethod
+    def attrdump(self) -> str:
+        """return string with attribute dump"""
+
+    # common read accessor methods provided by parent class
     def tempdir(self) -> Path:
         """get temporary directory path"""
         if self.tempdirpath is None:
@@ -101,10 +111,6 @@ class MoveBoxPrintable:
     def get_outdir(self) -> Path:
         """accessor for outdir attribute"""
         return self.outdir
-
-    @abstractmethod
-    def pdf_basename(self) -> str:
-        """get basename for label PDF file to be generated"""
 
     def room(self) -> str:
         """accessor for room field"""
@@ -434,3 +440,7 @@ class MoveBoxDestSign(MoveBoxPrintable):
     def pdf_basename(self) -> str:
         """get basename for sign PDF file to be generated"""
         return f"destsign_{self.field['room']}.pdf"
+
+    def attrdump(self) -> str:
+        """return string with attribute dump"""
+        return f"{self.field} outdir={self.outdir}"
