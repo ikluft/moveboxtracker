@@ -7,6 +7,7 @@ import sys
 import tempfile
 from shutil import move
 from pathlib import Path
+from abc import abstractmethod
 import sh
 from qrcodegen import QrCode
 from colorlookup import Color
@@ -100,6 +101,10 @@ class MoveBoxPrintable:
     def get_outdir(self) -> Path:
         """accessor for outdir attribute"""
         return self.outdir
+
+    @abstractmethod
+    def pdf_basename(self) -> str:
+        """get basename for label PDF file to be generated"""
 
 
 class MoveBoxLabel(MoveBoxPrintable):
@@ -419,8 +424,8 @@ class MoveBoxDestSign(MoveBoxPrintable):
         # TODO
 
     def pdf_basename(self) -> str:
-        """get basename for label PDF file to be generated"""
-        return f"label_{self.field['box']}.pdf"
+        """get basename for sign PDF file to be generated"""
+        return f"destsign_{self.field['room']}.pdf"
 
     def room(self) -> str:
         """accessor for room field"""
