@@ -106,6 +106,30 @@ class MoveBoxPrintable:
     def pdf_basename(self) -> str:
         """get basename for label PDF file to be generated"""
 
+    def room(self) -> str:
+        """accessor for room field"""
+        if "room" not in self.field:
+            raise RuntimeError("accessed room without setting it")
+        return self.field["room"]
+
+    def color(self) -> str:
+        """accessor for color field"""
+        if "color" not in self.field:
+            raise RuntimeError("accessed color without setting it")
+        return self.field["color"].name.replace(" ", "")
+
+    def color_rgb(self) -> tuple[float, float, float]:
+        """accessor for color field as RGB tuple"""
+        if "color" not in self.field:
+            raise RuntimeError("accessed color without setting it")
+        return self.field["color"].rgb
+
+    def color_hex(self) -> str:
+        """accessor for color field as RGB hexadecimal"""
+        if "color" not in self.field:
+            raise RuntimeError("accessed color without setting it")
+        return self.field["color"].hex
+
 
 class MoveBoxLabel(MoveBoxPrintable):
     """generate moving box labels"""
@@ -191,22 +215,6 @@ class MoveBoxLabel(MoveBoxPrintable):
     def box(self) -> str:
         """accessor for box field"""
         return self.field["box"]
-
-    def room(self) -> str:
-        """accessor for room field"""
-        return self.field["room"]
-
-    def color(self) -> str:
-        """accessor for color field"""
-        return self.field["color"].name.replace(" ", "")
-
-    def color_rgb(self) -> tuple[float, float, float]:
-        """accessor for color field as RGB tuple"""
-        return self.field["color"].rgb
-
-    def color_hex(self) -> str:
-        """accessor for color field as RGB hexadecimal"""
-        return self.field["color"].hex
 
     def user(self) -> str:
         """accessor for user field"""
@@ -426,19 +434,3 @@ class MoveBoxDestSign(MoveBoxPrintable):
     def pdf_basename(self) -> str:
         """get basename for sign PDF file to be generated"""
         return f"destsign_{self.field['room']}.pdf"
-
-    def room(self) -> str:
-        """accessor for room field"""
-        return self.field["room"]
-
-    def color(self) -> str:
-        """accessor for color field"""
-        return self.field["color"].name.replace(" ", "")
-
-    def color_rgb(self) -> tuple[float, float, float]:
-        """accessor for color field as RGB tuple"""
-        return self.field["color"].rgb
-
-    def color_hex(self) -> str:
-        """accessor for color field as RGB hexadecimal"""
-        return self.field["color"].hex
