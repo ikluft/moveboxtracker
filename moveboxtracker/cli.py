@@ -215,10 +215,10 @@ def _expand_id_list(id_list: list) -> list:
     return ids
 
 
-def _expand_room_list(id_list: list) -> list:
+def _expand_room_list(room_list: list) -> list:
     """expand list of strings with room names, record ids or id ranges into list of integer ids"""
     ids = []
-    for room_param in id_list:
+    for room_param in room_list:
         # regular expression check for start-end range of room ids
         match = re.fullmatch(r"^(\d+)-(\d+)$", str(room_param))
         if match:
@@ -391,9 +391,12 @@ def _do_destsign(args: dict, ui_cb: UICallback) -> ErrStr | None:
     outdir = _get_out_dir(args)
 
     # generate destination signs for each specified room (or * for all)
-
-    # TODO
-
+    for room in _expand_room_list(args["rooms"]):
+        # process a single room name/id from expanded list
+        destsign_obj = MoveBoxDestSign.typed_new(room, db_obj, outdir)
+        destsign_obj.gen_destsign()
+        if "print" in args and args["print"] is True:
+            destsign_obj.print_label()
     return None
 
 
@@ -638,7 +641,7 @@ def _gen_arg_subparsers_destsign(subparsers) -> None:
         metavar="LABELDIR",
         help="directory to place output PDF file(s), default: xxx-labels in same dir as xxx.db",
     )
-    parser_destsign.add_argument("--room", nargs="?")
+    parser_destsign.add_argument("rooms", nargs="+", metavar="ROOM")
     parser_destsign.set_defaults(func=_do_destsign)
 
 
