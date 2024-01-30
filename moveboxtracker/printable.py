@@ -416,11 +416,11 @@ class MoveBoxDestSign(MoveBoxPrintable):
         self.field["title"] = Color(room_data["title"])
 
     def gen_destsign(self) -> None:
-        """generate one rom destination sign file from the room's data"""
+        """generate one room destination sign file from the room's data"""
         # TODO
 
     def print_destsign(self) -> None:
-        """send the PDF label to a printer"""
+        """send the PDF destination sign to a printer"""
         # TODO
 
     def pdf_basename(self) -> str:
