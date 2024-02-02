@@ -431,6 +431,30 @@ class MoveBoxDestSign(MoveBoxPrintable):
 
     def gen_destsign(self) -> None:
         """generate one room destination sign file from the room's data"""
+
+        # allocate temporary directory
+        tmpdirpath = self.tempdir()
+
+        # generate label graphic
+        destsign_group = Group(
+            String(0, 1.8 * inch, self.room(), fontSize=48, fontName="Helvetica-Bold"),
+            String(0, 1.55 * inch, "destination for boxes tagged " + self.room(), fontSize=24,
+                   fontName="Helvetica"),
+            Rect(
+                0,  # TODO update coordinates
+                0.5 * inch,
+                1.5 * inch,
+                1.0 * inch,
+                fillColor=HexColor(self.color_hex()),
+                strokeWidth=0,
+            ),
+        )
+
+        # write PDF file
+        label_pdf_file = tmpdirpath / self.pdf_basename()
+        renderPDF.drawToFile(destsign_group, str(label_pdf_file))
+        move(label_pdf_file, self.outdir)
+
         # TODO
 
     def print_destsign(self) -> None:
