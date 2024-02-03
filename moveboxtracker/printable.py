@@ -432,6 +432,15 @@ class MoveBoxDestSign(MoveBoxPrintable):
     def gen_destsign(self) -> None:
         """generate one room destination sign file from the room's data"""
 
+        # skip this destination sign if destination PDF exists
+        destsign_pdf_basename = self.pdf_basename()
+        if Path(self.outdir / destsign_pdf_basename).is_file():
+            print(f"destsign {self.field['box']} PDF exists at {destsign_pdf_basename}: "
+                  + "leaving it as-is")
+            return
+
+        print("generating destsign with " + self.attrdump(), file=sys.stderr)
+
         # allocate temporary directory
         tmpdirpath = self.tempdir()
 
