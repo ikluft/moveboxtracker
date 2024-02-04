@@ -50,6 +50,24 @@ BOX_LABEL_STYLESHEET = (
     }
     """
 )
+DEST_SIGN_STYLESHEET = (
+    """
+    @page {
+        size: """
+    + PAGE_SIZE
+    + """;
+        margin: 1in;
+    }
+    table {
+        width: 100%
+        table-layout: fixed;
+        font-family: sans-serif;
+    }
+    big {
+        font-size: 56pt;
+    }
+    """
+)
 
 
 # to_svg_str() borrowed from qrcodegen demo
@@ -459,12 +477,21 @@ class MoveBoxDestSign(MoveBoxPrintable):
             ),
         )
 
-        # write PDF file
-        label_pdf_file = tmpdirpath / self.pdf_basename()
-        renderPDF.drawToFile(destsign_group, str(label_pdf_file))
-        move(label_pdf_file, self.outdir)
+        # Build destination sign as HTML and print.
+        # Simple HTML is PDF'ed & printed, then discarded when the temporary directory is removed.
+        # Just build HTML strings to minimize library dependencies.
+        html_file_path = self._gen_destsign_html(tmpdirpath)
+        css = CSS(string=DEST_SIGN_STYLESHEET)
 
-        # TODO
+        # generate PDF
+        destsign_pdf_file = Path(tmpdirpath / self.pdf_basename())
+        doc = HTML(filename=html_file_path)
+        doc.write_pdf(
+            target=destsign_pdf_file,
+            stylesheets=[css],
+            optimize_size=("fonts", "images"),
+        )
+        move(destsign_pdf_file, self.outdir)
 
     def print_destsign(self) -> None:
         """send the PDF destination sign to a printer"""
@@ -477,3 +504,43 @@ class MoveBoxDestSign(MoveBoxPrintable):
     def attrdump(self) -> str:
         """return string with attribute dump"""
         return f"{self.field} outdir={self.outdir}"
+
+    def _gen_destsign_html(self, tmpdirpath: Path) -> str:
+        """generate HTML in a file in the temporary directory for use in PDF generation"""
+
+        # generate destination sign
+        # this will be inserted in HTML page structure below
+        destsign_cell = [
+            '<table id="destsign_cell">',
+            "<tr>",
+            f"<td><big><b>{self.field['room']}</b></big></td>",
+            '<td rowspan=3 style="background: ' + self.color_hex() + '">&nbsp;</td>',
+            "</tr>",
+            "<tr>",
+            "<td>",
+            "This is the destination for boxes tagged",
+            "</br>",
+            f"<b>{self.field['room']}</b>",
+            "</td>",
+            "</tr>",
+            "<tr>",
+            "<td>&nbsp;</td>",
+            "</tr>",
+            "</table>",
+        ]
+
+        # generate HTML for destsign
+        destsign_html = (
+            [
+                "<html>",
+                "<head>",
+                "</head>",
+                "<body>",
+            ]
+            + destsign_cell
+            + ["</body>", "</html>"]
+        )
+        html_file_path = Path(f"{tmpdirpath}/destsign_{self.field['room']}.html")
+        with open(html_file_path, "wt", encoding="utf-8") as textfile:
+            textfile.write("\n".join(destsign_html))
+        return html_file_path
