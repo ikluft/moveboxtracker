@@ -396,7 +396,7 @@ def _do_destsign(args: dict, ui_cb: UICallback) -> ErrStr | None:
         destsign_obj = MoveBoxDestSign(room, db_obj, outdir)
         destsign_obj.gen_destsign()
         if "print" in args and args["print"] is True:
-            destsign_obj.print_label()
+            destsign_obj.print_destsign()
     return None
 
 
