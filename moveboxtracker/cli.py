@@ -614,7 +614,7 @@ def _gen_arg_subparsers_label(subparsers) -> None:
         metavar="LABELDIR",
         help="directory to place output PDF file(s), default: xxx-labels in same dir as xxx.db",
     )
-    parser_label.add_argument("box_id", nargs="*", metavar="ID")
+    parser_label.add_argument("box_id", nargs="+", metavar="ID")
     parser_label.set_defaults(func=_do_label)
 
 
@@ -642,7 +642,7 @@ def _gen_arg_subparsers_destsign(subparsers) -> None:
         help="directory to place output PDF file(s), default: xxx-labels in same dir as xxx.db",
     )
     parser_destsign.add_argument("--all", action="store_true")
-    parser_destsign.add_argument("rooms", nargs="+", metavar="ROOM")
+    parser_destsign.add_argument("rooms", nargs="*", metavar="ROOM")
     parser_destsign.set_defaults(func=_do_destsign)
 
 
