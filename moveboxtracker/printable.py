@@ -462,21 +462,6 @@ class MoveBoxDestSign(MoveBoxPrintable):
         # allocate temporary directory
         tmpdirpath = self.tempdir()
 
-        # generate label graphic
-        destsign_group = Group(
-            String(0, 1.8 * inch, self.room(), fontSize=48, fontName="Helvetica-Bold"),
-            String(0, 1.55 * inch, "destination for boxes tagged " + self.room(), fontSize=24,
-                   fontName="Helvetica"),
-            Rect(
-                0,  # TODO update coordinates
-                0.5 * inch,
-                1.5 * inch,
-                1.0 * inch,
-                fillColor=HexColor(self.color_hex()),
-                strokeWidth=0,
-            ),
-        )
-
         # Build destination sign as HTML and print.
         # Simple HTML is PDF'ed & printed, then discarded when the temporary directory is removed.
         # Just build HTML strings to minimize library dependencies.
