@@ -718,6 +718,25 @@ class MoveDbRoom(MoveDbRecord):
             room_id = room_db.db_create(newrec_data)
         return room_id
 
+    @classmethod
+    def all_room_ids(cls, mbt_db: MoveBoxTrackerDB) -> list:
+        """return a list of ids for all rooms"""
+
+        # set up database connection
+        table = cls.__class__.table_name()
+        cur = mbt_db.conn.cursor()
+        sql_cmd = f"SELECT id FROM {table} ORDER ASC"
+        mbt_db.display(text=f"executing SQL [{sql_cmd}]")
+        cur.execute(sql_cmd)
+        if cur.rowcount == 0:
+            return "SQL read failed"
+        rows = cur.fetchall()
+        ids = []
+        for row in rows:
+            ids.append(row["id"])
+        cur.close()
+        return ids
+
     def dest_sign_data(self, room_id: int) -> dict:
         """return a dict of room data for generating destination sign"""
 

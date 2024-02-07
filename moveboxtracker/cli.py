@@ -387,11 +387,15 @@ def _do_destsign(args: dict, ui_cb: UICallback) -> ErrStr | None:
     if not isinstance(db_obj, MoveBoxTrackerDB):
         return "failed to open database"
 
+    room_list = args["rooms"]
+    if "all" in args and args["all"] is True:
+        room_list = MoveDbRoom.all_room_ids(db_obj)
+
     # determine output directory location
     outdir = _get_out_dir(args)
 
     # generate destination signs for each specified room (or * for all)
-    for room in _expand_room_list(args["rooms"]):
+    for room in _expand_room_list(room_list):
         # process a single room name/id from expanded list
         destsign_obj = MoveBoxDestSign(room, db_obj, outdir)
         destsign_obj.gen_destsign()
