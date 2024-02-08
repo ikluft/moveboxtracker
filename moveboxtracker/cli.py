@@ -215,7 +215,7 @@ def _expand_id_list(id_list: list) -> list:
     return ids
 
 
-def _expand_room_list(room_list: list) -> list:
+def _expand_room_list(mbt_db: MoveBoxTrackerDB, room_list: list) -> list:
     """expand list of strings with room names, record ids or id ranges into list of integer ids"""
     ids = []
     for room_param in room_list:
@@ -237,7 +237,10 @@ def _expand_room_list(room_list: list) -> list:
             continue
 
         # search for room by name
-        # TODO
+        room_id = MoveDbRoom.get_id(mbt_db, str(room_param))
+        if room_id is not None:
+            ids.append(room_id)
+            continue
 
         # unrecognized string
         warnings.warn(f"skipped unrecognized room name/id/range {room_param}")
@@ -395,7 +398,7 @@ def _do_destsign(args: dict, ui_cb: UICallback) -> ErrStr | None:
     outdir = _get_out_dir(args)
 
     # generate destination signs for each specified room (or * for all)
-    for room in _expand_room_list(room_list):
+    for room in _expand_room_list(db_obj, room_list):
         # process a single room name/id from expanded list
         destsign_obj = MoveBoxDestSign(room, db_obj, outdir)
         destsign_obj.gen_destsign()

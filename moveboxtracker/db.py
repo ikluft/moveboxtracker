@@ -719,6 +719,13 @@ class MoveDbRoom(MoveDbRecord):
         return room_id
 
     @classmethod
+    def get_id(cls, mbt_db: MoveBoxTrackerDB, name: str) -> int | None:
+        """look up room id from name, otherwise return None"""
+        room_db = cls(mbt_db)
+        room_id = room_db.kv_search(key="name", value=name)
+        return room_id
+
+    @classmethod
     def all_room_ids(cls, mbt_db: MoveBoxTrackerDB) -> list:
         """return a list of ids for all rooms"""
 
