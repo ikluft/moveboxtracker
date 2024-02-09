@@ -443,7 +443,8 @@ class MoveBoxDestSign(MoveBoxPrintable):
                 raise RuntimeError(f"missing {key} in label parameters")
 
         # collect parameters
-        self.field["room"] = str(room_data["room"]).upper()
+        self.field["room_id"] = str(room_data["room"]).upper()
+        self.field["room"] = str(room_data["name"]).upper()
         self.field["color"] = Color(room_data["color"])
         self.field["title"] = room_data["title"]
 
@@ -484,7 +485,7 @@ class MoveBoxDestSign(MoveBoxPrintable):
 
     def pdf_basename(self) -> str:
         """get basename for sign PDF file to be generated"""
-        return f"destsign_{self.field['room']}.pdf"
+        return "destsign_" + self.field["room_id"] + ".pdf"
 
     def attrdump(self) -> str:
         """return string with attribute dump"""
@@ -498,14 +499,14 @@ class MoveBoxDestSign(MoveBoxPrintable):
         destsign_cell = [
             '<table id="destsign_cell">',
             "<tr>",
-            f"<td><big><b>{self.field['title']}</b></big></td>",
+            "<td><big><b>" + self.room() + "</b></big></td>",
             '<td rowspan=3 style="background: ' + self.color_hex() + '">&nbsp;</td>',
             "</tr>",
             "<tr>",
             "<td>",
             "This is the destination for boxes tagged",
             "</br>",
-            f"<b>{self.field['title']}</b>",
+            "<b>" + self.room() + "</b>",
             "</td>",
             "</tr>",
             "<tr>",
