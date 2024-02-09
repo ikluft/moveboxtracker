@@ -732,7 +732,7 @@ class MoveDbRoom(MoveDbRecord):
         # set up database connection
         table = cls.table_name()
         cur = mbt_db.conn.cursor()
-        sql_cmd = f"SELECT id FROM {table} ORDER ASC"
+        sql_cmd = f"SELECT id FROM {table} ORDER BY id ASC"
         mbt_db.display(text=f"executing SQL [{sql_cmd}]")
         cur.execute(sql_cmd)
         if cur.rowcount == 0:
@@ -740,7 +740,7 @@ class MoveDbRoom(MoveDbRecord):
         rows = cur.fetchall()
         ids = []
         for row in rows:
-            ids.append(row["id"])
+            ids.append(row[0])
         cur.close()
         return ids
 
