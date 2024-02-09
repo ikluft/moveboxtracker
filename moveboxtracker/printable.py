@@ -438,7 +438,7 @@ class MoveBoxDestSign(MoveBoxPrintable):
         # retreive fields from database
         rec_obj = MoveDbRoom(db_obj)
         room_data = rec_obj.dest_sign_data(room_id)
-        for key in ["room", "name", "title"]:
+        for key in ["room", "name", "color", "title"]:
             if key not in room_data:
                 raise RuntimeError(f"missing {key} in label parameters")
 
