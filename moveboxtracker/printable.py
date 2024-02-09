@@ -445,7 +445,7 @@ class MoveBoxDestSign(MoveBoxPrintable):
         # collect parameters
         self.field["room"] = str(room_data["room"]).upper()
         self.field["color"] = Color(room_data["color"])
-        self.field["title"] = Color(room_data["title"])
+        self.field["title"] = room_data["title"]
 
     def gen_destsign(self) -> None:
         """generate one room destination sign file from the room's data"""
@@ -498,14 +498,14 @@ class MoveBoxDestSign(MoveBoxPrintable):
         destsign_cell = [
             '<table id="destsign_cell">',
             "<tr>",
-            f"<td><big><b>{self.field['room']}</b></big></td>",
+            f"<td><big><b>{self.field['title']}</b></big></td>",
             '<td rowspan=3 style="background: ' + self.color_hex() + '">&nbsp;</td>',
             "</tr>",
             "<tr>",
             "<td>",
             "This is the destination for boxes tagged",
             "</br>",
-            f"<b>{self.field['room']}</b>",
+            f"<b>{self.field['title']}</b>",
             "</td>",
             "</tr>",
             "<tr>",
