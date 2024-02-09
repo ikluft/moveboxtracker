@@ -64,7 +64,17 @@ DEST_SIGN_STYLESHEET = (
         font-family: sans-serif;
     }
     big {
-        font-size: 56pt;
+        font-size: 48pt;
+    }
+    .box {
+        height: 6in;
+        width: 3in;
+        margin: 15px;
+        border: 1px solid black;
+    }
+    .centered
+    {
+        text-align: center;
     }
     """
 )
@@ -448,6 +458,18 @@ class MoveBoxDestSign(MoveBoxPrintable):
         self.field["color"] = Color(room_data["color"])
         self.field["title"] = room_data["title"]
 
+    def room_id(self) -> str:
+        """accessor for room id"""
+        if "room_id" not in self.field:
+            raise RuntimeError("accessed room_id without setting it")
+        return self.field["room_id"]
+
+    def title(self) -> str:
+        """accessor for room id"""
+        if "title" not in self.field:
+            raise RuntimeError("accessed title without setting it")
+        return self.field["title"]
+
     def gen_destsign(self) -> None:
         """generate one room destination sign file from the room's data"""
 
@@ -481,11 +503,18 @@ class MoveBoxDestSign(MoveBoxPrintable):
 
     def print_destsign(self) -> None:
         """send the PDF destination sign to a printer"""
-        # TODO
+
+        print("printing destsign " + self.room_id())
+        pdf_path = Path(self.outdir / self.pdf_basename())
+        if pdf_path.is_file():
+            lpr_cmd = sh.Command("lpr")
+            lpr_cmd(pdf_path)
+        else:
+            raise RuntimeError(f"PDF file {pdf_path} not found")
 
     def pdf_basename(self) -> str:
         """get basename for sign PDF file to be generated"""
-        return "destsign_" + self.field["room_id"] + ".pdf"
+        return "destsign_" + self.room_id() + ".pdf"
 
     def attrdump(self) -> str:
         """return string with attribute dump"""
@@ -499,18 +528,39 @@ class MoveBoxDestSign(MoveBoxPrintable):
         destsign_cell = [
             '<table id="destsign_cell">',
             "<tr>",
-            "<td><big><b>" + self.room() + "</b></big></td>",
-            '<td rowspan=3 style="background: ' + self.color_hex() + '">&nbsp;</td>',
+            '<td><big><b>' + self.room() + '</b></big></td>',
+            '<td rowspan=5>',
+            '<div class="box" style="background: ' + self.color_hex() + '">',
+            "</div>",
+            "</td>",
+            "</tr>",
+            "<tr>",
+            "<td>&nbsp;</td>",
             "</tr>",
             "<tr>",
             "<td>",
-            "This is the destination for boxes tagged",
+            "destination for boxes tagged",
             "</br>",
             "<b>" + self.room() + "</b>",
             "</td>",
             "</tr>",
             "<tr>",
             "<td>&nbsp;</td>",
+            "</tr>",
+            "<tr>",
+            "<td>",
+            "color coded",
+            "</br>",
+            "<b>" + self.color() + "</b>",
+            "</td>",
+            "</tr>",
+            "<tr colspan=2>",
+            "<td>&nbsp;</td>",
+            "</tr>",
+            "<tr>",
+            '<td colspan=2 class="centered">',
+            "Move project: " + self.title(),
+            "</td>",
             "</tr>",
             "</table>",
         ]
