@@ -759,7 +759,7 @@ class MoveDbRoom(MoveDbRecord):
         # use room id to query for room & user data via their foreign keys
         data = {"id": room_id}
         sql_cmd = (
-            "SELECT room.id AS room, room.name AS name, room.color AS color, "
+            "SELECT room.id AS room_id, room.name AS room, room.color AS color, "
             "project.title AS title "
             "FROM room, move_project AS project "
             "WHERE room.id == :id AND project.rowid == 1"
