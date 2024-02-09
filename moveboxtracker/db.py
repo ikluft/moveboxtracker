@@ -730,7 +730,7 @@ class MoveDbRoom(MoveDbRecord):
         """return a list of ids for all rooms"""
 
         # set up database connection
-        table = cls.__class__.table_name()
+        table = cls.table_name()
         cur = mbt_db.conn.cursor()
         sql_cmd = f"SELECT id FROM {table} ORDER ASC"
         mbt_db.display(text=f"executing SQL [{sql_cmd}]")
@@ -748,7 +748,7 @@ class MoveDbRoom(MoveDbRecord):
         """return a dict of room data for generating destination sign"""
 
         # make sure we have a room id
-        table = self.__class__.table_name()
+        table = self.table_name()
         if room_id is None:
             raise RuntimeError(f"room label data request on {table} is missing 'id' parameter")
 
