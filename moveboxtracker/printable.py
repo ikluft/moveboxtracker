@@ -476,7 +476,7 @@ class MoveBoxDestSign(MoveBoxPrintable):
         # skip this destination sign if destination PDF exists
         destsign_pdf_basename = self.pdf_basename()
         if Path(self.outdir / destsign_pdf_basename).is_file():
-            print(f"destsign {self.field['box']} PDF exists at {destsign_pdf_basename}: "
+            print(f"destsign {self.field['room']} PDF exists at {destsign_pdf_basename}: "
                   + "leaving it as-is")
             return
 
