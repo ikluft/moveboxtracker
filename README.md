@@ -43,11 +43,14 @@ Features of mobile app (upcoming):
 * exports SQLite db for merge into central CLI-managed db
 * maybe future expansion to control central db on Android if others want to help with that
 
+There are currently no plans for an iOS app unless others want to help develop and maintain it.
+
+## Example labels and signs
 ![example moving label printout page](doc/label-pdf-example.png "example page-style moving label printout")
 
 ![example moving label bagtag format](doc/bagtag-labels.png "example baggage tag style moving label")
 
-There are currently no plans for an iOS app unless others want to help develop and maintain it.
+![example destination sign page](doc/destsign-pdf-example.png "example destination sign page")
 
 ## Command-line usage
 
