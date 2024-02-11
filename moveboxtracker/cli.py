@@ -640,6 +640,7 @@ def _gen_arg_subparsers_destsign(subparsers) -> None:
     parser_destsign = subparsers.add_parser(
         "destsign", help="print destination room sign to direct helpers unloading truck"
     )
+    _common_db_file_arg(parser_destsign)
     parser_destsign.add_argument("--print", action="store_true")
     parser_destsign.add_argument(
         "--outdir",
