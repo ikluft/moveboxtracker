@@ -211,6 +211,26 @@ action options: (actions to take instead of creating or updating a record)
 
 See also the "db item" subcommand for lower level but broader access to the database.
 
+### label subcommand
+
+Printing a label from the database requires providing the database file, a box ID number and a PDF output file. From the database it will also retrieve the lost/found contact info, room name and room color code. Labels are printed duplicated 4 times on a page to have enough to place on 4 sides of a moving box. If more than one box ID number is provided, one page will be made for each set of labels. The resulting PDF file can be sent to any standard printer.
+
+    moveboxtracker label [-h] [--db DB] [--type [TYPE]] [--outdir LABELDIR] ID [ID ...]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+label generation options:
+
+- --type TYPE:            type of label to generate:
+  - "page" for a full page with 4 labels (default)
+  - "bagtag" for a baggage tag sized label (2 sides to be folded over) which can be laminated into a baggage tag
+- --outdir LABELDIR:      directory to place new label PDF files
+- ID:                     box record id number (like 23) or range of numbers (like 23-28, no spaces around the dash)
+
+By default moveboxtracker generates PDF output for US Letter size pages. To use a different page size, set the MBT_PAGE_SIZE environment variable before running the script. For example, to use A3 size pages, set "export MBT_PAGE_SIZE=A3" in your shell or its rc setup script before running moveboxtracker.
+
 ### location subcommand
 
 The "location" subcommand creates or modifies a location record.
@@ -304,27 +324,7 @@ action options: (actions to take instead of creating or updating a record)
 
 See also the "db user" subcommand for lower level but broader access to the database.
 
-### label subcommand
-
-Printing a label from the database requires providing the database file, a box ID number and a PDF output file. From the database it will also retrieve the lost/found contact info, room name and room color code. Labels are printed duplicated 4 times on a page to have enough to place on 4 sides of a moving box. If more than one box ID number is provided, one page will be made for each set of labels. The resulting PDF file can be sent to any standard printer.
-
-    moveboxtracker label [-h] [--db DB] [--type [TYPE]] [--outdir LABELDIR] ID [ID ...]
-
-top-level options:
-- -h, --help:           show help message and exit
-- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
-
-label generation options:
-
-- --type TYPE:            type of label to generate:
-  - "page" for a full page with 4 labels (default)
-  - "bagtag" for a baggage tag sized label (2 sides to be folded over) which can be laminated into a baggage tag
-- --outdir LABELDIR:      directory to place new label PDF files
-- ID:                     box record id number (like 23) or range of numbers (like 23-28, no spaces around the dash)
-
-By default moveboxtracker generates PDF output for US Letter size pages. To use a different page size, set the MBT_PAGE_SIZE environment variable before running the script. For example, to use A3 size pages, set "export MBT_PAGE_SIZE=A3" in your shell or its rc setup script before running moveboxtracker.
-
-### merge subcommand
+### merge subcommand (not implemented)
 
 The merge subcommand is not yet implemented. It will collect data from another SQLite database made by the moveboxtracker program or app into the one used by this instance. In particular this is intended as intake for data from the moveboxtracker Android app.
 
