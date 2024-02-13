@@ -62,13 +62,14 @@ The top-level subcommands are
 - init:     initialize new moving box database
 - batch:    create or update a batch record
 - box:      create or update a moving box record
+- destsign: print destination signs, where to unload boxes at destination
 - image:    create or update an image record
 - item:     create or update an item record
+- label:    print label(s) for specified box ids
 - location: create or update a location record
 - room:     create or update a room record
 - scan:     create or update a scan record
 - user:     create or update a user record
-- label:    print label(s) for specified box ids
 - merge:    merge in an external SQLite database file, from another device
 - dump:     dump database contents to standard output
 - db:       low-level database access subcommands
@@ -162,6 +163,26 @@ action options: (actions to take instead of creating or updating a record)
 - --list:               display a list of the box records
 
 See also the "db box" subcommand for lower level but broader access to the database.
+
+### destsign subcommand
+
+The "destsign" subcommand generates and/or prints destination signs to show which rooms to unload boxes
+at the destination of the move. It directs helpers in the unloading process to bring each box to the correct
+room based on the room on its label.
+
+    moveboxtracker destsign [-h] [--db DB] [--print] [--outdir LABELDIR] [--all] [ROOM ...]
+
+top-level options:
+- -h, --help:           show help message and exit
+- --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
+
+destination sign generation options:
+
+- --outdir LABELDIR:      directory to place new label PDF files
+- --all:                  generate destination signs for all rooms - ROOM parameters are not needed when this is used
+- ROOM:                   room name (like "Kitchen"), id number (like 23) or range of numbers (like 23-28, no spaces around the dash)
+
+By default moveboxtracker generates PDF output for US Letter size pages. To use a different page size, set the MBT_PAGE_SIZE environment variable before running the script. For example, to use A3 size pages, set "export MBT_PAGE_SIZE=A3" in your shell or its rc setup script before running moveboxtracker.
 
 ### image subcommand
 
