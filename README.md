@@ -70,6 +70,8 @@ The top-level subcommands are
 - room:     create or update a room record
 - scan:     create or update a scan record
 - user:     create or update a user record
+
+The low-level database subcommands are:
 - merge:    merge in an external SQLite database file, from another device
 - dump:     dump database contents to standard output
 - db:       low-level database access subcommands
@@ -89,6 +91,8 @@ Example:
     │ 1  │    1     │ MBR shoes │  2   │  1   │   1   │
     └────┴──────────┴───────────┴──────┴──────┴───────┘
     read 1 record(s)
+
+## Top-level subcommands
 
 ### init subcommand
 
@@ -345,6 +349,8 @@ action options: (actions to take instead of creating or updating a record)
 
 See also the "db user" subcommand for lower level but broader access to the database.
 
+## Low-level database subcommands
+
 ### merge subcommand (not implemented)
 
 The merge subcommand is not yet implemented. It will collect data from another SQLite database made by the moveboxtracker program or app into the one used by this instance. In particular this is intended as intake for data from the moveboxtracker Android app.
@@ -362,7 +368,7 @@ top-level options:
 ### db subcommand
 
 The db subcommand provides direct access to the database tables with create, read, update or delete (“CRUD”)
-operations. 
+operations.
 
     moveboxtracker db [-h] {batch,box,image,item,location,project,room,scan,user} {create,read,update,delete} ...
 
