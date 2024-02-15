@@ -46,9 +46,16 @@ Features of mobile app (upcoming):
 There are currently no plans for an iOS app unless others want to help develop and maintain it.
 
 ## Example labels and signs
+
+The default for labels is a four to a page.
+
 ![example moving label printout page](doc/label-pdf-example.png "example page-style moving label printout")
 
+When selecting "bagtag" labels, two are printed, each about the size of a business card, which can be folded over to be two sides of one laminated baggage tag label.
+
 ![example moving label bagtag format](doc/bagtag-labels.png "example baggage tag style moving label")
+
+Destination signs print a full page indicating where to unload boxes marked and color-coded for a specific room. These should be placed on the door and/or wall to direct helpers where the boxes with those labels should be unloaded.
 
 ![example destination sign page](doc/destsign-pdf-example.png "example destination sign page")
 
