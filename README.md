@@ -13,6 +13,7 @@ A separate mobile app handles scanning the QR codes printed on the labels.
 ## Project overview
 
 Features of the moving box labels:
+
 * box number for database lookup
 * room name and color to help unloading at the destination
   * color coding rooms is advice I found online, making it easier for helpers
@@ -21,6 +22,7 @@ Features of the moving box labels:
 * set "MBT_PAGE_SIZE" environment variable to change page size (default: Letter)
 
 Tables in the SQLite database:
+
 * batch_move: each batch of boxes moved, time and destination
 * box_scan: code scan event for a box being entered into a move batch
 * image: storage of optional images for moving_box and item records
@@ -66,6 +68,7 @@ These are issued like "moveboxtracker <subcommand> <subcommand-args>"
 At any level the --help parameter can show a list of subcommands and options.
 
 The top-level subcommands are
+
 - init:     initialize new moving box database
 - batch:    create or update a batch record
 - box:      create or update a moving box record
@@ -79,6 +82,7 @@ The top-level subcommands are
 - user:     create or update a user record
 
 The low-level database subcommands are:
+
 - merge:    merge in an external SQLite database file, from another device
 - dump:     dump database contents to standard output
 - db:       low-level database access subcommands
@@ -110,9 +114,11 @@ The usage is as follows:
     moveboxtracker init [-h] [--primary_user PRIMARY_USER] [--title TITLE] [--found_contact FOUND_CONTACT] DB
 
 top-level options:
+
 - -h, --help:           show help message and exit
 
 data field options:
+
 - --id ID:              record id number
 - --primary_user PRIMARY_USER: primary user id to attach to scans
 - --title TITLE:        project name
@@ -131,15 +137,18 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker batch [-h] [--db DB] [--id ID] [--timestamp TIMESTAMP] [--location LOCATION] [--commit] [--list]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:              record id number
 - --timestamp TIMESTAMP: batch timestamp
 - --location LOCATION:  batch location - where the boxes in this batch are moving to
 
 action options: (actions to take instead of creating or updating a record)
+
 - --commit:             update locations of boxes in this batch to the new location
 - --list:               display a list of the batch records
 
@@ -159,10 +168,12 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker box [-h] [--db DB] [--id ID] [--location LOCATION] [--info INFO] [--room ROOM] [--user USER] [--image IMAGE] [--list]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:              record id number
 - --location LOCATION:  box location, changes when a batch this box belongs to gets moved
 - --info INFO:          description of the box or unit
@@ -171,6 +182,7 @@ data field options:
 - --image IMAGE:        id referring to image table (optional)
 
 action options: (actions to take instead of creating or updating a record)
+
 - --list:               display a list of the box records
 
 See also the "db box" subcommand for lower level but broader access to the database.
@@ -184,6 +196,7 @@ room based on the room on its label.
     moveboxtracker destsign [-h] [--db DB] [--print] [--outdir LABELDIR] [--all] [ROOM ...]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
@@ -205,16 +218,19 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker image [-h] [--db DB] [--id ID] [--image_file IMAGE_FILE] [--description DESCRIPTION] [--timestamp TIMESTAMP] [--list]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:              record id number
 - --image_file IMAGE_FILE: relative or absolute path to the image file
 - --description DESCRIPTION: description of the image
 - --timestamp TIMESTAMP: time of the image, defaults to the current time at record creation
 
 action options: (actions to take instead of creating or updating a record)
+
 - --list:               display a list of the image records
 
 See also the "db image" subcommand for lower level but broader access to the database.
@@ -229,16 +245,19 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker item [-h] [--db DB] [--id ID] [--box BOX] [--description DESCRIPTION] [--image IMAGE] [--list]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:                   record id number
 - --box BOX:                 id number of the box which contains the item
 - --description DESCRIPTION: description of the image
 - --image IMAGE:             optional image of the item, as a path to a file or index into the image table
 
 action options: (actions to take instead of creating or updating a record)
+
 - --list:               display a list of the item records
 
 See also the "db item" subcommand for lower level but broader access to the database.
@@ -250,6 +269,7 @@ Printing a label from the database requires providing the database file, a box I
     moveboxtracker label [-h] [--db DB] [--type [TYPE]] [--outdir LABELDIR] ID [ID ...]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
@@ -273,14 +293,17 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker location [-h] [--db DB] [--id ID] [--name NAME] [--list]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:              record id number
 - --name NAME:          room name string
 
 action options: (actions to take instead of creating or updating a record)
+
 - --list:               display a list of the location records
 
 See also the "db location" subcommand for lower level but broader access to the database.
@@ -295,15 +318,18 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker room [-h] [--db DB] [--id ID] [--name NAME] [--color COLOR] [--list]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:              record id number
 - --name NAME:          room name string
 - --color COLOR:        color name string, which must be a valid web color
 
 action options: (actions to take instead of creating or updating a record)
+
 - --list:               display a list of the room records
 
 See also the "db room" subcommand for lower level but broader access to the database.
@@ -318,10 +344,12 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker scan [-h] [--db DB] [--id ID] [--box BOX] [--batch BATCH] [--user USER] [--timestamp TIMESTAMP] [--list | --boxes BOXID [BOXID ...]]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:              record id number
 - --box BOX:            id number of the box which is being moved
 - --batch BATCH:        id number of the batch group which the box will move along with
@@ -329,6 +357,7 @@ data field options:
 - --timestamp TIMESTAMP: time of the scan, defaults to the current time at record creation
 
 action options: (actions to take instead of creating or updating a record)
+
 - --list:               display a list of the room records
 - --commit:             commit the batch move by updating the location of all boxes in the batch to the batch location (requires or will prompt for --id)
 
@@ -344,14 +373,17 @@ When creating a new record, missing data fields will be filled via command-line 
     moveboxtracker user [-h] [--db DB] [--id ID] [--name NAME] [--list]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
 data field options:
+
 - --id ID:              record id number
 - --name NAME:          user name string, email address recommended
 
 action options: (actions to take instead of creating or updating a record)
+
 - --list:               display a list of the room records
 
 See also the "db user" subcommand for lower level but broader access to the database.
@@ -369,6 +401,7 @@ The dump subcommand prints out the contents of the SQLite database file. The pat
     moveboxtracker dump [-h] [--db DB]
 
 top-level options:
+
 - -h, --help:           show help message and exit
 - --db DB, --db_file:   DB database file (optional if MBT_DB_FILE is set in the environment)
 
@@ -380,6 +413,7 @@ operations.
     moveboxtracker db [-h] {batch,box,image,item,location,project,room,scan,user} {create,read,update,delete} ...
 
 The database tables are:
+
 * batch: batch/group of moving boxes
 * box: moving box including label info
 * image: images for boxes or items
