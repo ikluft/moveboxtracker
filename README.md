@@ -39,6 +39,9 @@ More about the database tables are in the [db](db) directory.
 Labels are printed with data from a query of the tables move_project, moving_box, room & uri_user.
 There are two label formats: 4-up on a page, or a baggage tag.
 
+The program also prints full-page "destination sign" which direct helpers unloading a moving truck where boxes
+labelled for specific rooms should be placed.
+
 An Android app was envisioned with the following features. Though it wasn't ready in time to help with my move.
 There is now no guarantee if or when that would be done.
 
