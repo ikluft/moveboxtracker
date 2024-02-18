@@ -8,7 +8,8 @@ It manages an SQLite database file containing moving) box data.
 It prints labels, four to a page, including features I wanted for
 tracking a move based on my experience and advice I found online.
 
-A separate mobile app handles scanning the QR codes printed on the labels.
+A separate mobile app was intended to handle scanning the QR codes printed on the labels.
+But it was not ready in time for my move. There is now no guarantee if or when that would be done.
 
 ## Project overview
 
@@ -38,14 +39,16 @@ More about the database tables are in the [db](db) directory.
 Labels are printed with data from a query of the tables move_project, moving_box, room & uri_user.
 There are two label formats: 4-up on a page, or a baggage tag.
 
-Features of mobile app (upcoming):
+An Android app was envisioned with the following features. Though it wasn't ready in time to help with my move.
+There is now no guarantee if or when that would be done.
+
 * Android app
 * QR code scanner using Quickie library https://github.com/G00fY2/quickie
 * scans a batch of boxes into local SQLite db
 * exports SQLite db for merge into central CLI-managed db
 * maybe future expansion to control central db on Android if others want to help with that
 
-There are currently no plans for an iOS app unless others want to help develop and maintain it.
+There are no plans for an iOS app unless others want to help develop and maintain it.
 
 ## Example labels and signs
 
