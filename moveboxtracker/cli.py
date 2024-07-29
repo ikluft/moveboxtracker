@@ -423,12 +423,22 @@ def _do_destsign(args: dict, ui_cb: UICallback) -> ErrStr | None:
 
 
 def _do_dump(args: dict, ui_cb: UICallback) -> ErrStr | None:
-    """dump database contents to standard output"""
+    """dump database contents to UI output"""
     db_file = _get_db_file(args)
     if db_file is None:
         return "database file not specified"
     db_obj = MoveBoxTrackerDB(db_file, ui_cb=ui_cb)
     db_obj.db_dump()
+    return None
+
+
+def _do_vacuum(args: dict, ui_cb: UICallback) -> ErrStr | None:
+    """vacuum (defragment) database"""
+    db_file = _get_db_file(args)
+    if db_file is None:
+        return "database file not specified"
+    db_obj = MoveBoxTrackerDB(db_file, ui_cb=ui_cb)
+    db_obj.db_vacuum()
     return None
 
 
@@ -676,6 +686,13 @@ def _gen_arg_subparsers_dump(subparsers) -> None:
     parser_dump.set_defaults(func=_do_dump)
 
 
+def _gen_arg_subparsers_vacuum(subparsers) -> None:
+    # dump subparser
+    parser_vacuum = subparsers.add_parser("vacuum", help="vacuum (defragment) database")
+    _common_db_file_arg(parser_vacuum)
+    parser_vacuum.set_defaults(func=_do_vacuum)
+
+
 def _gen_arg_subparser_table(subparsers_db, parser_db_parent, table_name, help_str, fields) -> None:
     subparser_table = subparsers_db.add_parser(
         table_name, help=help_str, parents=[parser_db_parent]
@@ -815,6 +832,9 @@ def _gen_arg_subparsers(top_parser) -> None:
 
     # dump subparser
     _gen_arg_subparsers_dump(subparsers)
+
+    # vacuum subparser
+    _gen_arg_subparsers_vacuum(subparsers)
 
     # define subparsers for low-level database access
     _gen_arg_subparsers_db(subparsers)

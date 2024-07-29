@@ -118,6 +118,7 @@ MBT_SCHEMA = {  # moveboxtracker SQL schema, used by _init_db() method
         "CREATE INDEX IF NOT EXISTS uri_user_id_index ON uri_user(id)",
     ],
 }
+MBT_SQL_VACUUM = "VACUUM"
 DB_CLASS_TO_TABLE = {
     "MoveDbBatchMove": "batch_move",
     "MoveDbMovingBox": "moving_box",
@@ -242,6 +243,11 @@ class MoveBoxTrackerDB:
         """dump database contents to standard output"""
         for line in self.conn.iterdump():
             self.display(text=line)
+
+    def db_vacuum(self) -> None:
+        """issue SQL command to vacuum (defragment) the database"""
+        self.conn.execute(MBT_SQL_VACUUM)
+        self.conn.commit()
 
 
 class MoveDbRecord:
